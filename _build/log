@@ -1,10 +1,10 @@
-# dune build
+# dune utop src
 # OCAMLPARAM: unset
 # Workspace root: /home/maniha/3110/finalProject
-$ /usr/bin/nproc > /tmp/dunef5307d.output 2> /dev/null
+$ /usr/bin/nproc > /tmp/dune8e451f.output 2> /dev/null
 # Auto-detected concurrency: 12
 # disable binary cache
-$ /home/maniha/.opam/cs3110-2021fa/bin/ocamlc.opt -config > /tmp/dune13c476.output
+$ /home/maniha/.opam/cs3110-2021fa/bin/ocamlc.opt -config > /tmp/dunebac536.output
 # Dune context:
 #  { name = "default"
 #  ; kind = "default"
@@ -112,9 +112,3 @@ $ /home/maniha/.opam/cs3110-2021fa/bin/ocamlc.opt -config > /tmp/dune13c476.outp
 #      ; windows_unicode = false
 #      }
 #  }
-$ (cd _build/default && /home/maniha/.opam/cs3110-2021fa/bin/ocamldep.opt -modules -impl src/main.ml) > _build/default/src/.database.objs/main.ml.d
-$ (cd _build/default && /home/maniha/.opam/cs3110-2021fa/bin/ocamlc.opt -w +a-4-6-7-9-27-29-30-32..42-44-45-48-50-60-66-67 -warn-error -a+31 -g -bin-annot -I src/.database.objs/byte -I /home/maniha/.opam/cs3110-2021fa/lib/ANSITerminal -I /home/maniha/.opam/cs3110-2021fa/lib/biniou -I /home/maniha/.opam/cs3110-2021fa/lib/bytes -I /home/maniha/.opam/cs3110-2021fa/lib/easy-format -I /home/maniha/.opam/cs3110-2021fa/lib/yojson -no-alias-deps -opaque -open Database -o src/.database.objs/byte/database__Main.cmo -c -impl src/main.ml)
-$ (cd _build/default && /home/maniha/.opam/cs3110-2021fa/bin/ocamlc.opt -w +a-4-6-7-9-27-29-30-32..42-44-45-48-50-60-66-67 -warn-error -a+31 -g -a -o src/database.cma src/.database.objs/byte/database.cmo src/.database.objs/byte/database__Main.cmo)
-$ (cd _build/default && /home/maniha/.opam/cs3110-2021fa/bin/ocamlopt.opt -w +a-4-6-7-9-27-29-30-32..42-44-45-48-50-60-66-67 -warn-error -a+31 -g -I src/.database.objs/byte -I src/.database.objs/native -I /home/maniha/.opam/cs3110-2021fa/lib/ANSITerminal -I /home/maniha/.opam/cs3110-2021fa/lib/biniou -I /home/maniha/.opam/cs3110-2021fa/lib/bytes -I /home/maniha/.opam/cs3110-2021fa/lib/easy-format -I /home/maniha/.opam/cs3110-2021fa/lib/yojson -intf-suffix .ml -no-alias-deps -opaque -open Database -o src/.database.objs/native/database__Main.cmx -c -impl src/main.ml)
-$ (cd _build/default && /home/maniha/.opam/cs3110-2021fa/bin/ocamlopt.opt -w +a-4-6-7-9-27-29-30-32..42-44-45-48-50-60-66-67 -warn-error -a+31 -g -a -o src/database.cmxa src/.database.objs/native/database.cmx src/.database.objs/native/database__Main.cmx)
-$ (cd _build/default && /home/maniha/.opam/cs3110-2021fa/bin/ocamlopt.opt -w +a-4-6-7-9-27-29-30-32..42-44-45-48-50-60-66-67 -warn-error -a+31 -g -shared -linkall -I src -o src/database.cmxs src/database.cmxa)
