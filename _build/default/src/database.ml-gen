@@ -1,0 +1,2 @@
+(** @canonical Database.Main *)
+module Main = Database__Main

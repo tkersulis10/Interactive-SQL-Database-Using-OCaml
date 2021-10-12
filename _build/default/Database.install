@@ -1,0 +1,19 @@
+lib: [
+  "_build/install/default/lib/Database/META"
+  "_build/install/default/lib/Database/database.a"
+  "_build/install/default/lib/Database/database.cma"
+  "_build/install/default/lib/Database/database.cmi"
+  "_build/install/default/lib/Database/database.cmt"
+  "_build/install/default/lib/Database/database.cmx"
+  "_build/install/default/lib/Database/database.cmxa"
+  "_build/install/default/lib/Database/database.ml"
+  "_build/install/default/lib/Database/database__Main.cmi"
+  "_build/install/default/lib/Database/database__Main.cmt"
+  "_build/install/default/lib/Database/database__Main.cmx"
+  "_build/install/default/lib/Database/dune-package"
+  "_build/install/default/lib/Database/main.ml"
+  "_build/install/default/lib/Database/opam"
+]
+libexec: [
+  "_build/install/default/lib/Database/database.cmxs"
+]
