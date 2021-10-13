@@ -4,7 +4,7 @@ open Yojson.Basic.Util
 (************************************************************ A SQL
   database management system.
 
-  @author Max Hadden (mnh38)
+  @author Max Hadden (mnh38), Tomas Kersulis (tk492)
 
   ************************************************************)
 
