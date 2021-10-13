@@ -16,10 +16,11 @@ let set_file_location (file : string) : string = "./data/" ^ file
     location changes*)
 let file_location = set_file_location "database.json"
 
-let dbs_from_file : Yojson.Basic.t =
-  Yojson.Basic.from_file file_location
+let dbs_from_file (file : string) : Yojson.Basic.t =
+  Yojson.Basic.from_file (set_file_location file)
 
-let database_list = dbs_from_file |> Yojson.Basic.to_string
+let database_list (file : string) =
+  dbs_from_file file |> Yojson.Basic.to_string
 
 let write_to_file (db : Yojson.Basic.t) =
   Yojson.Basic.to_file file_location db
@@ -45,10 +46,11 @@ let splice_outer_parens (dbm : string) =
   let spliced = String.sub dbm 1 (String.length dbm - 2) in
   if String.length spliced > 0 then spliced ^ "," else spliced
 
-let add_database (name : string) (values : string list) =
+let add_database (file : string) (name : string) (values : string list)
+    =
   let str =
     "{"
-    ^ splice_outer_parens database_list
+    ^ splice_outer_parens (database_list file)
     ^ "\"" ^ name ^ "\"" ^ ":" ^ convert_vals values ^ "}"
   in
   let file_out = open_out file_location in
