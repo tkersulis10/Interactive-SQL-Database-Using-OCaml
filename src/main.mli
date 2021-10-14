@@ -10,12 +10,12 @@ val dbs_from_file : string -> Yojson.Basic.t
 (** [dbs_from_file file] retrieves the json representation of database
     file [file]. *)
 
-val database_list : string
+val database_list : string -> string
 (** [database_list file] converts json database in file [file] to a list
     of individual databases. *)
 
-val write_to_file : Yojson.Basic.t -> unit
-(** [write_to_file db] writes [db] to database file. *)
+val write_to_file : string -> Yojson.Basic.t -> unit
+(** [write_to_file file db] writes [db] to database file [file]. *)
 
 val splice_outer_parens : string -> string
 (** [splice_outer_parens dbm] removes the outer parentheses of database
@@ -27,4 +27,4 @@ val splice_outer_parens : string -> string
 val add_database : string -> string -> string list -> unit
 (** [add_database file name values] adds a new database labeled [name]
     with values [values] to the database list in file [file] --
-    Yojson.Basic.to_file file_location (Yojson.Basic.from_string str). *)
+    Yojson.Basic.to_file file (Yojson.Basic.from_string str). *)

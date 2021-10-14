@@ -22,8 +22,8 @@ let dbs_from_file (file : string) : Yojson.Basic.t =
 let database_list (file : string) =
   dbs_from_file file |> Yojson.Basic.to_string
 
-let write_to_file (db : Yojson.Basic.t) =
-  Yojson.Basic.to_file file_location db
+let write_to_file (file : string) (db : Yojson.Basic.t) =
+  Yojson.Basic.to_file (set_file_location file) db
 
 (** [convert_vals_help vals acc] is a recursive helper to
     [convert_vals vals]. *)
@@ -53,6 +53,6 @@ let add_database (file : string) (name : string) (values : string list)
     ^ splice_outer_parens (database_list file)
     ^ "\"" ^ name ^ "\"" ^ ":" ^ convert_vals values ^ "}"
   in
-  let file_out = open_out file_location in
+  let file_out = open_out (set_file_location file) in
   Printf.fprintf file_out "%s" str;
   close_out file_out
