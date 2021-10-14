@@ -54,10 +54,21 @@ let add_database_test
     expected_output =
   let _ = add_database file database_name values in
   name >:: fun _ ->
-  assert_equal expected_output (dbs_from_file file)
-    ~printer:Yojson.Basic.to_string
+  assert_equal expected_output (database_list file) ~printer:identity
 
-let main_tests = []
+let main_tests =
+  [
+    database_list_test "database_list for database.json" "database.json"
+      "{\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"}}";
+    write_to_file_test "write_to_file for database.json"
+      "test_database.json" test_database_1 test_database_1;
+    splice_outer_parens_test "splice_outer_parens for database.json"
+      (database_list "database.json")
+      "\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"},";
+    add_database_test "add_database for database.json"
+      "empty_database.json" "test_database" [ "hi"; "bye" ]
+      "\"test_database\":{\"hi\":\"\",\"bye\":\"\"}";
+  ]
 
 let suite =
   "test suite for final project" >::: List.flatten [ main_tests ]
