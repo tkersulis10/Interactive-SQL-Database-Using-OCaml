@@ -1,13 +1,6 @@
 open Yojson
 open Yojson.Basic.Util
 
-(************************************************************ A SQL
-  database management system.
-
-  @author Max Hadden (mnh38), Tomas Kersulis (tk492)
-
-  ************************************************************)
-
 type db_list = { databases : Yojson.Basic.t }
 
 let set_file_location (file : string) : string = "./data/" ^ file
