@@ -51,10 +51,39 @@ let add_database_test
     (file : string)
     (database_name : string)
     (values : string list)
-    expected_output =
+    (expected_output : string) =
   let _ = add_database file database_name values in
   name >:: fun _ ->
   assert_equal expected_output (database_list file) ~printer:identity
+
+(** [clear_database_test name file database_name expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling [clear_database file database_name]. *)
+let clear_database_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (expected_value : string) =
+  let _ = clear_database file database_name in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.Util.to_string)
+    ~printer:identity
+
+(** [clear_database_file_test name input expected_output] creates an
+    OUnit test with name [name] that compares whether
+    [input |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling [clear_database_file input]. *)
+let clear_database_file_test
+    (name : string)
+    (input : string)
+    (expected_output : string) =
+  let _ = clear_database_file input in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (input |> dbs_from_file |> Yojson.Basic.Util.to_string)
+    ~printer:identity
 
 let main_tests =
   [
@@ -65,9 +94,21 @@ let main_tests =
     splice_outer_parens_test "splice_outer_parens for database.json"
       (database_list "database.json")
       "\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"},";
-    add_database_test "add_database for database.json"
+    add_database_test "add_database for empty_database.json"
       "empty_database.json" "test_database" [ "hi"; "bye" ]
       "\"test_database\":{\"hi\":\"\",\"bye\":\"\"}";
+    clear_database_test
+      "clear_database for database.json where name does not match a \
+       database"
+      "database.json" "Hello"
+      "{\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"}}";
+    clear_database_test
+      "clear_database for database.json where name does match a \
+       database"
+      "database.json" "testDB2" "{}";
+    clear_database_file_test
+      "clear_database_file_test for empty_database.json"
+      "empty_database.json" "{}";
   ]
 
 let suite =

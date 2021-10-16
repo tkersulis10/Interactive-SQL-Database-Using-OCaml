@@ -28,3 +28,14 @@ val add_database : string -> string -> string list -> unit
 (** [add_database file name values] adds a new database labeled [name]
     with values [values] to the database list in file [file] --
     Yojson.Basic.to_file file (Yojson.Basic.from_string str). *)
+
+val clear_database : string -> string -> unit
+(** [delete_database file name] removes the database with name [name]
+    from the database file [file]. Removes the first instance of a
+    database with name [name] in [file] if there are multiple databases
+    with the same name. If [name] is not in database file [file], then
+    the same file is returned unchanged. *)
+
+val clear_database_file : string -> unit
+(** [clear_database_file file] clears the whole database file [file], so
+    that there are no databases in the file. *)
