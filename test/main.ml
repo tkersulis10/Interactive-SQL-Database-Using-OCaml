@@ -64,7 +64,7 @@ let clear_database_test
     (name : string)
     (file : string)
     (database_name : string)
-    (expected_value : string) =
+    (expected_output : string) =
   let _ = clear_database file database_name in
   name >:: fun _ ->
   assert_equal expected_output
