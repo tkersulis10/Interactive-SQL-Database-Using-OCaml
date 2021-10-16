@@ -1,6 +1,10 @@
 type db_list
 (** Json list representation of a set of databases. *)
 
+exception NotFound of string
+(** Raised when a database that is not in the database file is searched
+    for. *)
+
 val set_file_location : string -> string
 (** [set_file_location file] sets the location of the file [file] for
     the current database. Requires: [file] must be a legal json file in
@@ -39,3 +43,9 @@ val clear_database : string -> string -> unit
 val clear_database_file : string -> unit
 (** [clear_database_file file] clears the whole database file [file], so
     that there are no databases in the file. *)
+
+val find_database : string -> string -> Yojson.Basic.t
+(** [find_database file database_name] returns the values of the
+    database [database_name] in database file [file]. Raises: NotFound
+    "Database not found in file" if the [database_name] is not in
+    [database_list]. *)

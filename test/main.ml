@@ -85,6 +85,19 @@ let clear_database_file_test
     (input |> dbs_from_file |> Yojson.Basic.Util.to_string)
     ~printer:identity
 
+(** [find_database_test name file database_name expected_output] creates
+    an OUnit test with name [name] that compares whether
+    [find_database file database_name] is equal to [expected_output]. *)
+let find_database_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (expected_output : string) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (Yojson.Basic.Util.to_string (find_database file database_name))
+    ~printer:identity
+
 let main_tests =
   [
     database_list_test "database_list for database.json" "database.json"
@@ -109,6 +122,16 @@ let main_tests =
     clear_database_file_test
       "clear_database_file_test for empty_database.json"
       "empty_database.json" "{}";
+    (let _ = add_database "database.json" "testDB3" [ "1"; "2"; "3" ] in
+     find_database_test
+       "find_database for database.json when the database does exist \
+        in file"
+       "database.json" "testDB3" "{\"1\":\"\",\"1\":\"\",\"3\":\"\"}");
+    ( "find_database for database.json when the database does not \
+       exist in the file"
+    >:: fun _ ->
+      assert_raises (NotFound "Database not found in file") (fun () ->
+          find_database "database.json" "testDB78") );
   ]
 
 let suite =

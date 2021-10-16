@@ -3,6 +3,8 @@ open Yojson.Basic.Util
 
 type db_list = { databases : Yojson.Basic.t }
 
+exception NotFound of string
+
 let set_file_location (file : string) : string = "./data/" ^ file
 
 (** File location, accessible via this function in the event the
@@ -83,3 +85,21 @@ let clear_database_file (file : string) =
   let file_out = open_out (set_file_location file) in
   Printf.fprintf file_out "%s" str;
   close_out file_out
+
+(** [find_database_helper database_name database_list] returns the
+    values of the database with name [name] in the list of database
+    [database_list]. Raises: NotFound "Database not found in file" if
+    the [database_name] is not in [database_list]. *)
+let rec find_database_helper
+    (database_name : string)
+    (database_list : (string * Basic.t) list) =
+  let exception NotFound of string in
+  match database_list with
+  | [] -> raise (NotFound "Database not found in file")
+  | (name, values) :: t ->
+      if name = database_name then values
+      else find_database_helper name t
+
+let rec find_database (file : string) (database_name : string) =
+  let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+  find_database_helper database_name database_list
