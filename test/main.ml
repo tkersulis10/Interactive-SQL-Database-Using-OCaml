@@ -98,6 +98,21 @@ let find_database_test
     (Yojson.Basic.Util.to_string (find_database file database_name))
     ~printer:identity
 
+(** [find_database_test name file database_name expected_output] creates
+    an OUnit test with name [name] that compares whether
+    [find_database file database_name] is equal to [expected_output]. *)
+let find_value_in_database_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (expected_output : string) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (Yojson.Basic.Util.to_string
+       (find_value_in_database file database_name value_name))
+    ~printer:identity
+
 let main_tests =
   [
     database_list_test "database_list for database.json" "database.json"
@@ -132,6 +147,20 @@ let main_tests =
     >:: fun _ ->
       assert_raises (NotFound "Database not found in file") (fun () ->
           find_database "database.json" "testDB78") );
+    find_value_in_database_test
+      "find_value_in_database for database.json when value does exist \
+       in database"
+      "database.json" "testDB3" "2" "";
+    ( "find_value_in_database for database.json when the value does \
+       not exist in the database"
+    >:: fun _ ->
+      assert_raises (NotFound "Value not found in database") (fun () ->
+          find_value_in_database "database.json" "testDB3" "4") );
+    ( "find_value_in_database for database.json when the database does \
+       not exist in the file, but the value does exist in the file"
+    >:: fun _ ->
+      assert_raises (NotFound "Database not found in file") (fun () ->
+          find_value_in_database "database.json" "testDB0" "3") );
   ]
 
 let suite =

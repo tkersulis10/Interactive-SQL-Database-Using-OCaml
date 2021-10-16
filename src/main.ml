@@ -87,9 +87,9 @@ let clear_database_file (file : string) =
   close_out file_out
 
 (** [find_database_helper database_name database_list] returns the
-    values of the database with name [name] in the list of database
-    [database_list]. Raises: NotFound "Database not found in file" if
-    the [database_name] is not in [database_list]. *)
+    values of the database with name [database_name] in the list of
+    database [database_list]. Raises: NotFound "Database not found in
+    file" if the [database_name] is not in [database_list]. *)
 let rec find_database_helper
     (database_name : string)
     (database_list : (string * Basic.t) list) =
@@ -98,8 +98,29 @@ let rec find_database_helper
   | [] -> raise (NotFound "Database not found in file")
   | (name, values) :: t ->
       if name = database_name then values
-      else find_database_helper name t
+      else find_database_helper database_name t
 
 let rec find_database (file : string) (database_name : string) =
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   find_database_helper database_name database_list
+
+(** [find_value_helper value_list value_name] returns the value
+    associated with the value [value_name] in the list of values
+    [value_list] in a database. Raises: NotFound "Value not found in
+    database" if the [value_name] is not in [value_list]. *)
+let rec find_value_helper
+    (value_list : (string * Basic.t) list)
+    (value_name : string) =
+  match value_list with
+  | [] -> raise (NotFound "Value not found in database")
+  | (name, values) :: t ->
+      if name = value_name then values
+      else find_value_helper t value_name
+
+let find_value_in_database
+    (file : string)
+    (database_name : string)
+    (value_name : string) =
+  let database = find_database file database_name in
+  let value_list = Yojson.Basic.Util.to_assoc database in
+  find_value_helper value_list value_name

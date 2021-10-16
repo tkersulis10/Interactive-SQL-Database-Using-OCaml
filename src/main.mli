@@ -2,8 +2,8 @@ type db_list
 (** Json list representation of a set of databases. *)
 
 exception NotFound of string
-(** Raised when a database that is not in the database file is searched
-    for. *)
+(** Raised when a database or value is searched for and not found in a
+    file or database. *)
 
 val set_file_location : string -> string
 (** [set_file_location file] sets the location of the file [file] for
@@ -49,3 +49,10 @@ val find_database : string -> string -> Yojson.Basic.t
     database [database_name] in database file [file]. Raises: NotFound
     "Database not found in file" if the [database_name] is not in
     [database_list]. *)
+
+val find_value_in_database :
+  string -> string -> string -> Yojson.Basic.t
+(** [find_value_in_database file database_name value_name] returns the
+    value associated with the value [value_name] in the database
+    [database_name]. Raises: NotFound "Value not found in database" if
+    the [value_name] is not in [database_name]. *)
