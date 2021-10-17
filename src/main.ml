@@ -52,6 +52,12 @@ let add_database (file : string) (name : string) (values : string list)
   Printf.fprintf file_out "%s" str;
   close_out file_out
 
+let clear_database_file (file : string) =
+  let str = "{}" in
+  let file_out = open_out (set_file_location file) in
+  Printf.fprintf file_out "%s" str;
+  close_out file_out
+
 (** [clear_database_helper name database] removes the database with name
     [name] from the list of databases [databases]. If name is not in
     databases, then [clear_database_helper name database] returns
@@ -69,6 +75,7 @@ let rec clear_database_helper
 let rec write_all_databases
     (file : string)
     (databases : (string * Basic.t) list) =
+  let _ = clear_database_file file in
   match databases with
   | [] -> ()
   | (_, values) :: t ->
@@ -79,12 +86,6 @@ let clear_database (file : string) (name : string) =
   let database = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let list_after_removal = clear_database_helper name database in
   write_all_databases file list_after_removal
-
-let clear_database_file (file : string) =
-  let str = "{}" in
-  let file_out = open_out (set_file_location file) in
-  Printf.fprintf file_out "%s" str;
-  close_out file_out
 
 (** [find_database_helper database_name database_list] returns the
     values of the database with name [database_name] in the list of
