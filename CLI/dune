@@ -1,4 +1,3 @@
-(library
- (name commandline)
- (public_name Commandline)
+(executable
+ (name main)
  (libraries Database ANSITerminal))
