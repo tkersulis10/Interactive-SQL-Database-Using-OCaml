@@ -4,6 +4,8 @@ open Main
 
 let test_database_1 = dbs_from_file "database.json"
 
+let test_database_2 = dbs_from_file "test_database.json"
+
 (** [identity s] outputs the same string string [s] that is input. *)
 let identity (s : string) : string = s
 
@@ -86,6 +88,21 @@ let clear_database_file_test
     (input |> dbs_from_file |> Yojson.Basic.Util.to_string)
     ~printer:identity
 
+(** [clear_database_test name file database_name expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling [clear_database file database_name]. *)
+let clear_database_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (expected_output : string) =
+  let _ = clear_database file database_name in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.Util.to_string)
+    ~printer:identity
+
 (** [find_database_test name file database_name expected_output] creates
     an OUnit test with name [name] that compares whether
     [find_database file database_name] is equal to [expected_output]. *)
@@ -110,8 +127,7 @@ let find_value_in_database_test
     (expected_output : string) =
   name >:: fun _ ->
   assert_equal expected_output
-    (Yojson.Basic.Util.to_string
-       (find_value_in_database file database_name value_name))
+    (find_value_in_database file database_name value_name)
     ~printer:identity
 
 let main_tests =
@@ -127,17 +143,29 @@ let main_tests =
       "empty_database.json" "test_database" [ "hi"; "bye" ]
       "\"test_database\":{\"hi\":\"\",\"bye\":\"\"}";
     delete_database_test
-      "clear_database for database.json where name does not match a \
+      "delete_database for database.json where name does not match a \
        database"
       "database.json" "Hello"
       "{\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"}}";
     delete_database_test
-      "clear_database for database.json where name does match a \
+      "delete_database for database.json where name does match a \
        database"
       "database.json" "testDB2" "{}";
     clear_database_file_test
       "clear_database_file_test for empty_database.json"
       "empty_database.json" "{}";
+    clear_database_test
+      "clear_database for test_database.json where name does not match \
+       a database"
+      "test_database.json" "CS3110"
+      (Yojson.Basic.to_string test_database_2);
+    (let _ =
+       add_database "test_database.json" "testDB4" [ "1"; "2"; "3" ]
+     in
+     clear_database_test
+       "clear_database for test_database.json where name does match a \
+        database"
+       "test_database.json" "testDB4" "{\"testDB2\":[{}]}");
     (let _ = add_database "database.json" "testDB3" [ "1"; "2"; "3" ] in
      find_database_test
        "find_database for database.json when the database does exist \
@@ -151,7 +179,7 @@ let main_tests =
     find_value_in_database_test
       "find_value_in_database for database.json when value does exist \
        in database"
-      "database.json" "testDB3" "2" "";
+      "database.json" "testDB3" "2" "\"\"";
     ( "find_value_in_database for database.json when the value does \
        not exist in the database"
     >:: fun _ ->

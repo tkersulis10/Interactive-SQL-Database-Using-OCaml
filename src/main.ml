@@ -109,6 +109,27 @@ let delete_database (file : string) (name : string) =
   let list_after_removal = delete_database_helper name database in
   write_all_databases file list_after_removal
 
+(** [write_all_databases_one_cleared file database_name databases]
+    writes all the databases in database list [databases] to file [file]
+    except clears the database [database_name]. *)
+let rec write_all_databases_one_cleared
+    (file : string)
+    (database_name : string)
+    (databases : (string * Basic.t) list) =
+  match databases with
+  | [] -> ()
+  | (name, values) :: t ->
+      let _ =
+        if database_name = name then add_database file database_name []
+        else add_database_t file name values
+      in
+      write_all_databases_one_cleared file database_name t
+
+let clear_database (file : string) (name : string) =
+  let databases = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+  let _ = clear_database_file file in
+  write_all_databases_one_cleared file name databases
+
 (** [find_database_helper database_name database_list] returns the
     values of the database with name [database_name] in the list of
     database [database_list]. Raises: NotFound "Database not found in

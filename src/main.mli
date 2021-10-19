@@ -50,6 +50,14 @@ val delete_database : string -> string -> unit
     with the same name. If [name] is not in database file [file], then
     the same file is returned unchanged. *)
 
+val clear_database : string -> string -> unit
+(** [clear_database file name] clears te database with name [name] from
+    the database file [file]. The database remains in the file, but its
+    values are removed. Clears the first instance of a database with
+    name [name] in [file] if there are multiple databases with the same
+    name. If [name] is not in the database file [file], then the same
+    file is returned unchanged. *)
+
 val find_database : string -> string -> Yojson.Basic.t
 (** [find_database file database_name] returns the values of the
     database [database_name] in database file [file]. Raises: NotFound
