@@ -46,7 +46,7 @@ let add_database (file : string) (name : string) (values : string list)
   let str =
     "{"
     ^ splice_outer_parens (database_list file)
-    ^ "\"" ^ name ^ "\"" ^ ":" ^ convert_vals values ^ "}"
+    ^ "\"" ^ name ^ "\"" ^ ":[" ^ convert_vals values ^ "]}"
   in
   let file_out = open_out (set_file_location file) in
   Printf.fprintf file_out "%s" str;
