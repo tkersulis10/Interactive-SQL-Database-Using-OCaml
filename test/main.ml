@@ -56,16 +56,17 @@ let add_database_test
   name >:: fun _ ->
   assert_equal expected_output (database_list file) ~printer:identity
 
-(** [clear_database_test name file database_name expected_output]
+(** [delete_database_test name file database_name expected_output]
     creates an OUnit test with name [name] that compares whether
     [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling [clear_database file database_name]. *)
-let clear_database_test
+    [expected_output] after calling
+    [delete_database file database_name]. *)
+let delete_database_test
     (name : string)
     (file : string)
     (database_name : string)
     (expected_output : string) =
-  let _ = clear_database file database_name in
+  let _ = delete_database file database_name in
   name >:: fun _ ->
   assert_equal expected_output
     (file |> dbs_from_file |> Yojson.Basic.Util.to_string)
@@ -125,12 +126,12 @@ let main_tests =
     add_database_test "add_database for empty_database.json"
       "empty_database.json" "test_database" [ "hi"; "bye" ]
       "\"test_database\":{\"hi\":\"\",\"bye\":\"\"}";
-    clear_database_test
+    delete_database_test
       "clear_database for database.json where name does not match a \
        database"
       "database.json" "Hello"
       "{\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"}}";
-    clear_database_test
+    delete_database_test
       "clear_database for database.json where name does match a \
        database"
       "database.json" "testDB2" "{}";

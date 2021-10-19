@@ -73,17 +73,17 @@ let clear_database_file (file : string) =
   Printf.fprintf file_out "%s" str;
   close_out file_out
 
-(** [clear_database_helper name database] removes the database with name
-    [name] from the list of databases [databases]. If name is not in
-    databases, then [clear_database_helper name database] returns
+(** [delete_database_helper name database] removes the database with
+    name [name] from the list of databases [databases]. If name is not
+    in databases, then [delete_database_helper name database] returns
     [databases]. *)
-let rec clear_database_helper
+let rec delete_database_helper
     (name : string)
     (databases : (string * Basic.t) list) =
   match databases with
   | [] -> []
   | ((str, values) as h) :: t ->
-      if str = name then t else h :: clear_database_helper name t
+      if str = name then t else h :: delete_database_helper name t
 
 (** [write_all_databases_helper file databases] adds the databases in
     [databases] to [file]. *)
@@ -104,9 +104,9 @@ let write_all_databases
   let _ = clear_database_file file in
   write_all_databases_helper file databases
 
-let clear_database (file : string) (name : string) =
+let delete_database (file : string) (name : string) =
   let database = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
-  let list_after_removal = clear_database_helper name database in
+  let list_after_removal = delete_database_helper name database in
   write_all_databases file list_after_removal
 
 (** [find_database_helper database_name database_list] returns the

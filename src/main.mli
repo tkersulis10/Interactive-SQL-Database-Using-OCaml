@@ -43,7 +43,7 @@ val clear_database_file : string -> unit
 (** [clear_database_file file] clears the whole database file [file], so
     that there are no databases in the file. *)
 
-val clear_database : string -> string -> unit
+val delete_database : string -> string -> unit
 (** [delete_database file name] removes the database with name [name]
     from the database file [file]. Removes the first instance of a
     database with name [name] in [file] if there are multiple databases
