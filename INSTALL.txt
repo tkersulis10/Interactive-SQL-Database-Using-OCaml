@@ -1,0 +1,16 @@
+Instructions:
+
+Download the zip file and run make dune from the source directory /SQL-DBMS.
+
+Open /data/database.json to see the current database of the system.
+
+In ubuntu (or another command line) run "make cli"
+
+This will open our command line for the database. In our command line you will
+find an explanation of how to use it.
+
+If you want to test all the database functions we have so far, run "make utop"
+from the ubuntu (or other program) command line. In utop, run "open Database.Main;;"
+to access all the functions in main.mli. Then you can test what each function
+in main.mli does to the database by calling them and then checking and saving
+the .json file you called in /data.
