@@ -37,8 +37,6 @@ let print_help_msg t =
   print_endline "";
   print_endline ""
 
-(*converts a list [args] into a list of arguments without any empty
-  strings*)
 let rec parse_args (args : string list) acc : string list =
   match args with
   | h :: t ->
@@ -46,9 +44,6 @@ let rec parse_args (args : string list) acc : string list =
       else parse_args t acc
   | [] -> if List.length acc > 0 then acc else raise NoArgs
 
-(*Extracts a tuple of name and list of field name args given a create
-  table command from args list [args] raises: NoArgs if no args are
-  available*)
 let rec get_create_args args =
   match args with
   | h :: t ->
@@ -61,10 +56,6 @@ let cmd_do (cmd : string) (args : string list) =
   | "create" -> Create (get_create_args args)
   | _ -> raise Malformed
 
-(*locates the fully parsed command (in the event the command is 2+ words
-  like CREATE TABLE) and a list of arguments. Passes result into
-  [cmd_do] for argument handling. Requires: cmd is a lowercase ascii
-  string.*)
 let cmd_read cmd lst =
   match cmd with
   | "help" -> Help
@@ -78,9 +69,6 @@ let cmd_read cmd lst =
   | "quit" -> Quit
   | _ -> raise Empty
 
-(* gets the first word of a command in list [lst], indicating command
-   type, followed by the rest of the list, indicating arguments, and
-   calls [cmd_read] on the resulting command and args*)
 let rec get_cmd_sep (lst : string list) =
   match lst with
   | h :: t ->
@@ -88,7 +76,6 @@ let rec get_cmd_sep (lst : string list) =
       else get_cmd_sep t
   | [] -> raise Empty
 
-(*Parse an input string to a command of type command*)
 let parse (input : string) : command =
   input |> String.split_on_char ' ' |> get_cmd_sep
 
