@@ -8,7 +8,7 @@ exception NotFound of string
 let set_file_location (file : string) : string = "./data/" ^ file
 
 (** File location, accessible via this function in the event the
-    location changes*)
+    location changes. *)
 let file_location = set_file_location "database.json"
 
 let dbs_from_file (file : string) : Yojson.Basic.t =
@@ -52,6 +52,21 @@ let add_database (file : string) (name : string) (values : string list)
   Printf.fprintf file_out "%s" str;
   close_out file_out
 
+let add_database_t
+    (file : string)
+    (name : string)
+    (values : Yojson.Basic.t) =
+  let str =
+    "{"
+    ^ splice_outer_parens (database_list file)
+    ^ "\"" ^ name ^ "\"" ^ ":["
+    ^ Yojson.Basic.to_string values
+    ^ "]}"
+  in
+  let file_out = open_out (set_file_location file) in
+  Printf.fprintf file_out "%s" str;
+  close_out file_out
+
 let clear_database_file (file : string) =
   let str = "{}" in
   let file_out = open_out (set_file_location file) in
@@ -70,16 +85,16 @@ let rec clear_database_helper
   | ((str, values) as h) :: t ->
       if str = name then t else h :: clear_database_helper name t
 
-(** [write_all_databases] writes all the databases inside [databases] to
-    the file [file]. *)
+(** [write_all_databases file databases] writes all the databases inside
+    [databases] to the file [file]. *)
 let rec write_all_databases
     (file : string)
     (databases : (string * Basic.t) list) =
   let _ = clear_database_file file in
   match databases with
   | [] -> ()
-  | (_, values) :: t ->
-      let _ = write_to_file file values in
+  | (name, values) :: t ->
+      let _ = add_database_t file name values in
       write_all_databases file t
 
 let clear_database (file : string) (name : string) =

@@ -33,6 +33,12 @@ val add_database : string -> string -> string list -> unit
     with values [values] to the database list in file [file] --
     Yojson.Basic.to_file file (Yojson.Basic.from_string str). *)
 
+val add_database_t : string -> string -> Yojson.Basic.t -> unit
+(** [add_database_t file name values] adds a new database labeled [name]
+    with values [values] to the datbase list in file file [file]. Does
+    the same thing as [add_databse file name values] except with an
+    input of type Yojson.Basic.t instead of string list for [values]. *)
+
 val clear_database_file : string -> unit
 (** [clear_database_file file] clears the whole database file [file], so
     that there are no databases in the file. *)
