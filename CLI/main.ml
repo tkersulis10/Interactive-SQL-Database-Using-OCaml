@@ -13,7 +13,7 @@ exception NoArgs
 
 exception Malformed
 
-(*Help message for when Help command is typed*)
+(* Help message for when Help command is typed. *)
 let print_help_msg t =
   print_string "\n\n";
   ANSITerminal.print_string [ ANSITerminal.red ] "Help Menu";

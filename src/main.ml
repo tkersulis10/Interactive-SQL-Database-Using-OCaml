@@ -59,9 +59,9 @@ let add_database_t
   let str =
     "{"
     ^ splice_outer_parens (database_list file)
-    ^ "\"" ^ name ^ "\"" ^ ":["
+    ^ "\"" ^ name ^ "\"" ^ ":"
     ^ Yojson.Basic.to_string values
-    ^ "]}"
+    ^ "}"
   in
   let file_out = open_out (set_file_location file) in
   Printf.fprintf file_out "%s" str;
@@ -85,17 +85,24 @@ let rec clear_database_helper
   | ((str, values) as h) :: t ->
       if str = name then t else h :: clear_database_helper name t
 
-(** [write_all_databases file databases] writes all the databases inside
-    [databases] to the file [file]. *)
-let rec write_all_databases
+(** [write_all_databases_helper file databases] adds the databases in
+    [databases] to [file]. *)
+let rec write_all_databases_helper
     (file : string)
     (databases : (string * Basic.t) list) =
-  let _ = clear_database_file file in
   match databases with
   | [] -> ()
   | (name, values) :: t ->
       let _ = add_database_t file name values in
-      write_all_databases file t
+      write_all_databases_helper file t
+
+(** [write_all_databases file databases] writes all the databases inside
+    [databases] to the file [file]. *)
+let write_all_databases
+    (file : string)
+    (databases : (string * Basic.t) list) =
+  let _ = clear_database_file file in
+  write_all_databases_helper file databases
 
 let clear_database (file : string) (name : string) =
   let database = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
