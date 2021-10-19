@@ -56,9 +56,9 @@ val find_database : string -> string -> Yojson.Basic.t
     "Database not found in file" if the [database_name] is not in
     [database_list]. *)
 
-val find_value_in_database :
-  string -> string -> string -> Yojson.Basic.t
+val find_value_in_database : string -> string -> string -> string
 (** [find_value_in_database file database_name value_name] returns the
     value associated with the value [value_name] in the database
-    [database_name]. Raises: NotFound "Value not found in database" if
-    the [value_name] is not in [database_name]. *)
+    [database_name]. Requires: The value is a string. Raises: NotFound
+    "Value not found in database" if the [value_name] is not in
+    [database_name]. *)

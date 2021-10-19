@@ -137,13 +137,20 @@ let rec find_value_helper
   match value_list with
   | [] -> raise (NotFound "Value not found in database")
   | (name, values) :: t ->
-      if name = value_name then values
+      if name = value_name then Yojson.Basic.to_string values
       else find_value_helper t value_name
 
 let find_value_in_database
     (file : string)
     (database_name : string)
     (value_name : string) =
-  let database = find_database file database_name in
+  let database_list =
+    Yojson.Basic.Util.to_list (find_database file database_name)
+  in
+  let database =
+    match database_list with
+    | [] -> raise (NotFound "Database not foud in file")
+    | h :: t -> h
+  in
   let value_list = Yojson.Basic.Util.to_assoc database in
   find_value_helper value_list value_name
