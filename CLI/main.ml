@@ -13,6 +13,7 @@ exception NoArgs
 
 exception Malformed
 
+(*Help message for when Help command is typed*)
 let print_help_msg t =
   print_string "\n\n";
   ANSITerminal.print_string [ ANSITerminal.red ] "Help Menu";
@@ -37,7 +38,7 @@ let print_help_msg t =
   print_endline ""
 
 (*converts a list [args] into a list of arguments without any empty
-  string*)
+  strings*)
 let rec parse_args (args : string list) acc : string list =
   match args with
   | h :: t ->
