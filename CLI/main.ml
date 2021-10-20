@@ -6,6 +6,7 @@ type command =
   | Delete of string
   | List
   | ListRows of string
+  | Get of (string * string)
   | Help
   | Quit
 
@@ -25,7 +26,8 @@ let print_help_msg () =
   ANSITerminal.print_string [ ANSITerminal.yellow ] "  Commands ";
   print_string "are not case sensitive. ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "Arguments ";
-  print_string "are separated by a single space each.\n\n";
+  print_string
+    "ARE case sensitive, and are separated by a single space each.\n\n";
 
   ANSITerminal.print_string [ ANSITerminal.red ] "Command List:\n";
   print_endline "";
@@ -57,6 +59,26 @@ let print_help_msg () =
   ANSITerminal.print_string [ ANSITerminal.yellow ] "delete table ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
   print_string "deletes the database table labeled 'Users'.\n\n";
+  print_string "             ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "delete table ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "* ";
+  print_string "deletes all database tables in the system.\n\n";
+
+  (*get help*)
+  ANSITerminal.print_string [ ANSITerminal.green ]
+    "  Get values by field name:\n\n";
+  print_string "    Syntax: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "get ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "field_name ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "in ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "database_name\n\n";
+  print_string "    Example: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "get ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "name ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "in ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
+  print_string
+    "prints a list of the names of each user in the User database.\n\n";
 
   (*list help*)
   ANSITerminal.print_string [ ANSITerminal.green ]
@@ -90,6 +112,18 @@ let rec get_create_args args =
       else get_create_args t
   | [] -> raise NoArgs
 
+let rec get_get_args val_name args =
+  match args with
+  | h :: t ->
+      if String.lowercase_ascii h = "in" then
+        match t with
+        | h :: t ->
+            if List.length t = 0 then Get (val_name, h)
+            else raise Malformed
+        | [] -> raise NoArgs
+      else raise Malformed
+  | [] -> raise NoArgs
+
 let cmd_do (cmd : string) (args : string list) =
   match cmd with
   | "create" -> Create (get_create_args args)
@@ -98,6 +132,11 @@ let cmd_do (cmd : string) (args : string list) =
       | h :: t ->
           if String.length h > 0 then Delete h else raise Malformed
       | [] -> raise NoArgs
+    end
+  | "get" -> begin
+      match args with
+      | h :: t -> get_get_args h t
+      | [] -> raise Empty
     end
   | _ -> raise Invalid
 
@@ -128,6 +167,7 @@ let cmd_read cmd lst =
           else raise Malformed
       | [] -> raise Malformed
     end
+  | "get" -> cmd_do "get" lst
   | "quit" -> Quit
   | _ -> raise Invalid
 
@@ -147,11 +187,10 @@ let main () =
   ANSITerminal.print_string
     [ ANSITerminal.magenta ]
     "\n\n~~ Welcome to the Database Management System. ~~";
-  print_endline "";
-  print_endline "Enter command, or type help for more information.";
-  print_endline "*";
+  print_endline "\n";
   print_endline "* Created by: Max Hadden & Tomas Kersulis";
-  print_endline "*";
+  print_endline "* ";
+  print_endline "* Enter command, or type help for more information.\n";
   let end_loop = ref false in
   while not !end_loop do
     print_string "> ";
@@ -163,36 +202,87 @@ let main () =
         print_string "\nDatabase table ";
         ANSITerminal.print_string [ ANSITerminal.green ] name;
         print_string " created successfully.\n\n"
-    | Delete name -> begin
-        match delete_database "/database.json" name with
-        | exception DatabaseNotFound fname ->
-            print_string "\nDatabase table ";
-            ANSITerminal.print_string [ ANSITerminal.red ] fname;
+    | Get (val_name, db_name) -> begin
+        match
+          find_value_in_database "/database.json" db_name val_name
+        with
+        | exception DatabaseNotFound n ->
+            print_string "\nError: database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] n;
+            print_string " not found.\n\n"
+        | exception ValNotFound v ->
+            print_string "\nError: field ";
+            ANSITerminal.print_string [ ANSITerminal.red ] v;
             print_string " not found.\n\n"
         | _ ->
-            print_string "\nDeleted database table ";
-            ANSITerminal.print_string [ ANSITerminal.green ] name;
-            print_string " successfully\n\n"
+            print_string
+              (find_value_in_database "/database.json" db_name val_name);
+            print_string "\n\n"
+      end
+    | Delete name -> begin
+        match name with
+        | "*" -> (
+            ANSITerminal.print_string [ ANSITerminal.red ]
+              "\n\
+               Are you sure you want to delete all database tables? \
+               (Y/N)\n\
+               > ";
+            match String.lowercase_ascii (read_line ()) with
+            | "Y"
+            | "y" ->
+                clear_database_file "/database.json";
+                print_string
+                  "All database tables deleted successfully\n\n"
+            | "N"
+            | "n" ->
+                print_string "Operation cancelled\n\n"
+            | _ ->
+                ANSITerminal.print_string [ ANSITerminal.red ]
+                  "Invalid Command.\n\n")
+        | _ -> begin
+            match delete_database "/database.json" name with
+            | exception DatabaseNotFound fname ->
+                print_string "\nDatabase table ";
+                ANSITerminal.print_string [ ANSITerminal.red ] fname;
+                print_string " not found.\n\n"
+            | _ ->
+                print_string "\nDeleted database table ";
+                ANSITerminal.print_string [ ANSITerminal.green ] name;
+                print_string " successfully\n\n"
+          end
       end
     | List ->
         ANSITerminal.print_string [ ANSITerminal.red ] "\nDatabases:\n";
         print_string (get_db_names_list ())
-    | ListRows name ->
-        print_string "\nRows of database ";
-        ANSITerminal.print_string [ ANSITerminal.red ] name;
-        print_string ":\n";
-        print_string (list_rows name)
+    | ListRows name -> begin
+        match list_rows name with
+        | exception DatabaseNotFound name ->
+            print_string "\nDatabase ";
+            ANSITerminal.print_string [ ANSITerminal.red ] name;
+            print_string " not found.\n\n"
+        | _ ->
+            print_string "\nRows of database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] name;
+            print_string ":\n";
+            print_string (list_rows name)
+      end
     | Quit ->
         print_endline "\nChanges have been saved. Exiting...\n\n";
         end_loop := true
     | exception Malformed ->
-        print_endline
-          "Malformed command. Be sure to separate arguments with a \
-           single whitespace."
-    | exception Invalid -> print_endline "Invalid command."
-    | exception Empty -> print_endline "Empty command"
+        ANSITerminal.print_string [ ANSITerminal.red ]
+          "\n\
+           Malformed command. Be sure to separate arguments with a \
+           single whitespace.\n\n"
+    | exception Invalid ->
+        ANSITerminal.print_string [ ANSITerminal.red ]
+          "\nInvalid command.\n\n"
+    | exception Empty ->
+        ANSITerminal.print_string [ ANSITerminal.red ]
+          "\nEmpty command.\n\n"
     | exception NoArgs ->
-        print_endline "No arguments or invalid argument number detected"
+        ANSITerminal.print_string [ ANSITerminal.red ]
+          "\nNo arguments or invalid argument number detected.\n\n"
   done
 
 (*Execute engine*)
