@@ -17,7 +17,7 @@ let database_list_test
     (input : string)
     (expected_output : string) =
   name >:: fun _ ->
-  assert_equal expected_output (database_list input) ~printer:identity
+  assert_equal expected_output (database_string input) ~printer:identity
 
 (** [write_to_file_test name file db expected_output] creates an OUnit
     test with name [name] that compares whether [write_to_file file db]
@@ -56,7 +56,7 @@ let add_database_test
     (expected_output : string) =
   let _ = add_database file database_name values in
   name >:: fun _ ->
-  assert_equal expected_output (database_list file) ~printer:identity
+  assert_equal expected_output (database_string file) ~printer:identity
 
 (** [delete_database_test name file database_name expected_output]
     creates an OUnit test with name [name] that compares whether
@@ -137,7 +137,7 @@ let main_tests =
     write_to_file_test "write_to_file for database.json"
       "test_database.json" test_database_1 test_database_1;
     splice_outer_parens_test "splice_outer_parens for database.json"
-      (database_list "database.json")
+      (database_string "database.json")
       "\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"},";
     add_database_test "add_database for empty_database.json"
       "empty_database.json" "test_database" [ "hi"; "bye" ]
@@ -174,7 +174,7 @@ let main_tests =
     ( "find_database for database.json when the database does not \
        exist in the file"
     >:: fun _ ->
-      assert_raises (NotFound "Database not found in file") (fun () ->
+      assert_raises (DatabaseNotFound "testDB78") (fun () ->
           find_database "database.json" "testDB78") );
     find_value_in_database_test
       "find_value_in_database for database.json when value does exist \
@@ -183,12 +183,12 @@ let main_tests =
     ( "find_value_in_database for database.json when the value does \
        not exist in the database"
     >:: fun _ ->
-      assert_raises (NotFound "Value not found in database") (fun () ->
+      assert_raises (ValNotFound "4") (fun () ->
           find_value_in_database "database.json" "testDB3" "4") );
     ( "find_value_in_database for database.json when the database does \
        not exist in the file, but the value does exist in the file"
     >:: fun _ ->
-      assert_raises (NotFound "Database not found in file") (fun () ->
+      assert_raises (ValNotFound "3") (fun () ->
           find_value_in_database "database.json" "testDB0" "3") );
   ]
 

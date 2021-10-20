@@ -8,16 +8,19 @@ exception NoArgs
 (** Raised when a command has no arguments. *)
 
 exception Malformed
-(** Raised when a command is malformed. *)
+(** Raised when a command is badly formatted. *)
+
+exception Invalid
+(** Raised when a command is unknown. *)
 
 val parse_args : string list -> string list -> string list
 (** [parse_args args acc] converts a list [args] into a list of
     arguments without any empty strings. *)
 
 val get_create_args : string list -> string * string list
-(** [get_create_args args] extracts a tuple of name and list of field
-    name args given a create table command from args list [args].
-    Raises: NoArgs if no args are available. *)
+(** [get_create_args args] extracts a tuple of (name, field_name_args)
+    given a create table command from args list [args]. Raises: NoArgs
+    if no args are available. *)
 
 val cmd_do : string -> string list -> command
 (** [cmd_do cmd args] handles the arguments [args] of the command [cmd]. *)
