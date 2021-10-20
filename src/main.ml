@@ -3,7 +3,9 @@ open Yojson.Basic.Util
 
 type db_list = { databases : Yojson.Basic.t }
 
-exception NotFound of string
+exception DatabaseNotFound of string
+
+exception ValNotFound of string
 
 let set_file_location (file : string) : string = "./data/" ^ file
 
@@ -14,7 +16,7 @@ let file_location = set_file_location "database.json"
 let dbs_from_file (file : string) : Yojson.Basic.t =
   Yojson.Basic.from_file (set_file_location file)
 
-let database_list (file : string) =
+let database_string (file : string) =
   dbs_from_file file |> Yojson.Basic.to_string
 
 let write_to_file (file : string) (db : Yojson.Basic.t) =
@@ -45,7 +47,7 @@ let add_database (file : string) (name : string) (values : string list)
     =
   let str =
     "{"
-    ^ splice_outer_parens (database_list file)
+    ^ splice_outer_parens (database_string file)
     ^ "\"" ^ name ^ "\"" ^ ":[" ^ convert_vals values ^ "]}"
   in
   let file_out = open_out (set_file_location file) in
@@ -58,7 +60,7 @@ let add_database_t
     (values : Yojson.Basic.t) =
   let str =
     "{"
-    ^ splice_outer_parens (database_list file)
+    ^ splice_outer_parens (database_string file)
     ^ "\"" ^ name ^ "\"" ^ ":"
     ^ Yojson.Basic.to_string values
     ^ "}"
@@ -74,16 +76,19 @@ let clear_database_file (file : string) =
   close_out file_out
 
 (** [delete_database_helper name database] removes the database with
-    name [name] from the list of databases [databases]. If name is not
-    in databases, then [delete_database_helper name database] returns
-    [databases]. *)
-let rec delete_database_helper
+    name [name] from the list of databases [databases]. Raises:
+    DatabaseNotFound if database is not in system *)
+let delete_database_helper
     (name : string)
     (databases : (string * Basic.t) list) =
-  match databases with
-  | [] -> []
-  | ((str, values) as h) :: t ->
-      if str = name then t else h :: delete_database_helper name t
+  let rec delete_aux name databases deleted acc =
+    match databases with
+    | [] -> if deleted then acc else raise (DatabaseNotFound name)
+    | ((str, values) as h) :: t ->
+        if str = name then delete_aux name t true acc
+        else delete_aux name t false (acc @ [ h ])
+  in
+  delete_aux name databases false []
 
 (** [write_all_databases_helper file databases] adds the databases in
     [databases] to [file]. *)
@@ -132,14 +137,13 @@ let clear_database (file : string) (name : string) =
 
 (** [find_database_helper database_name database_list] returns the
     values of the database with name [database_name] in the list of
-    database [database_list]. Raises: NotFound "Database not found in
-    file" if the [database_name] is not in [database_list]. *)
+    database [database_list]. Raises: [DatabaseNotFound database_name]
+    if the [database_name] is not in [database_list]. *)
 let rec find_database_helper
     (database_name : string)
     (database_list : (string * Basic.t) list) =
-  let exception NotFound of string in
   match database_list with
-  | [] -> raise (NotFound "Database not found in file")
+  | [] -> raise (DatabaseNotFound database_name)
   | (name, values) :: t ->
       if name = database_name then values
       else find_database_helper database_name t
@@ -150,13 +154,13 @@ let rec find_database (file : string) (database_name : string) =
 
 (** [find_value_helper value_list value_name] returns the value
     associated with the value [value_name] in the list of values
-    [value_list] in a database. Raises: NotFound "Value not found in
-    database" if the [value_name] is not in [value_list]. *)
+    [value_list] in a database. Raises: [ValNotFound val_name] if the
+    [value_name] is not in [value_list]. *)
 let rec find_value_helper
     (value_list : (string * Basic.t) list)
     (value_name : string) =
   match value_list with
-  | [] -> raise (NotFound "Value not found in database")
+  | [] -> raise (ValNotFound value_name)
   | (name, values) :: t ->
       if name = value_name then Yojson.Basic.to_string values
       else find_value_helper t value_name
@@ -170,8 +174,61 @@ let find_value_in_database
   in
   let database =
     match database_list with
-    | [] -> raise (NotFound "Database not foud in file")
+    | [] -> raise (DatabaseNotFound database_name)
     | h :: t -> h
   in
   let value_list = Yojson.Basic.Util.to_assoc database in
   find_value_helper value_list value_name
+
+let get_db_names_list () =
+  let list =
+    Yojson.Basic.Util.to_assoc (dbs_from_file "database.json")
+  in
+  let rec get_names_rec acc list =
+    match list with
+    | h :: t -> begin
+        match h with
+        | x, y -> get_names_rec (acc ^ "  -  " ^ x ^ "\n") t
+      end
+    | [] -> acc ^ "\n"
+  in
+  get_names_rec "" list
+
+let list_rows (database_name : string) =
+  let database_row_list =
+    find_database "database.json" database_name
+    |> Yojson.Basic.Util.to_list |> List.tl |> List.rev
+  in
+
+  (*recursively go through each following row of db, adding each string
+    representation of row to acc with newline separator*)
+  let rec list_rows_rec rows acc =
+    match rows with
+    | val_list :: t ->
+        (*add field name and value name to string*)
+        let rec list_vals_rec vals acc =
+          match vals with
+          | (name, value) :: t ->
+              if List.length t != List.length database_row_list then
+                list_vals_rec t "(" ^ name ^ ": "
+                ^ Yojson.Basic.Util.to_string value
+                ^ "),  " ^ acc
+              else
+                (*end of list case no comma*)
+                list_vals_rec t "(" ^ name ^ ": "
+                ^ Yojson.Basic.Util.to_string value
+                ^ ")  " ^ acc
+          | [] -> "\n - " ^ acc
+        in
+
+        list_rows_rec t
+          (list_vals_rec
+             (List.rev (Yojson.Basic.Util.to_assoc val_list))
+             "")
+        ^ acc ^ "\n"
+    | [] ->
+        if String.length acc > 0 then acc ^ "\n\n"
+        else "\n - Database is empty.\n\n"
+  in
+
+  list_rows_rec database_row_list ""

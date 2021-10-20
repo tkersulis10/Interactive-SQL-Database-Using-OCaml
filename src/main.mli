@@ -1,9 +1,16 @@
 type db_list
 (** Json list representation of a set of databases. *)
 
-exception NotFound of string
-(** Raised when a database or value is searched for and not found in a
-    file or database. *)
+exception ValNotFound of string
+(** Raised when a value is searched for and not found in a file or
+    database. *)
+
+exception DatabaseNotFound of string
+(** Raised when a database is searched for and not found in a file or
+    database. *)
+
+val file_location : string
+(**Default file path of main DBMS*)
 
 val set_file_location : string -> string
 (** [set_file_location file] sets the location of the file [file] for
@@ -14,9 +21,9 @@ val dbs_from_file : string -> Yojson.Basic.t
 (** [dbs_from_file file] retrieves the json representation of database
     file [file]. *)
 
-val database_list : string -> string
-(** [database_list file] converts json database in file [file] to a list
-    of individual databases. *)
+val database_string : string -> string
+(** [database_string file] converts json database in file [file] to a
+    json string of individual databases. *)
 
 val write_to_file : string -> Yojson.Basic.t -> unit
 (** [write_to_file file db] writes [db] to database file [file]. *)
@@ -70,3 +77,11 @@ val find_value_in_database : string -> string -> string -> string
     [database_name]. Requires: The value is a string. Raises: NotFound
     "Value not found in database" if the [value_name] is not in
     [database_name]. *)
+
+val get_db_names_list : unit -> string
+(**return a string of each database name in the system, each separated
+   by a newline for printing into console.*)
+
+val list_rows : string -> string
+(**returns string of field-value pairs for each row a database given by
+   [database_name], with each row separated by a newline*)
