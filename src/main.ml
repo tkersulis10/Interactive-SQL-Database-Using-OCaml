@@ -169,16 +169,26 @@ let find_value_in_database
     (file : string)
     (database_name : string)
     (value_name : string) =
-  let database_list =
+  let database_entry_list =
     Yojson.Basic.Util.to_list (find_database file database_name)
+    |> List.tl |> List.rev
   in
-  let database =
-    match database_list with
-    | [] -> raise (DatabaseNotFound database_name)
-    | h :: t -> h
+  let rec scan_database entry_list acc =
+    match entry_list with
+    | h :: t ->
+        if List.length t > 0 then
+          scan_database t ", "
+          ^ find_value_helper (Yojson.Basic.Util.to_assoc h) value_name
+          ^ acc
+        else
+          scan_database t
+            (find_value_helper (Yojson.Basic.Util.to_assoc h) value_name
+            ^ acc)
+    | [] ->
+        if String.length acc > 0 then "\n" ^ acc
+        else "\n  - No results found. Database is empty."
   in
-  let value_list = Yojson.Basic.Util.to_assoc database in
-  find_value_helper value_list value_name
+  scan_database database_entry_list ""
 
 let get_db_names_list () =
   let list =
@@ -190,7 +200,9 @@ let get_db_names_list () =
         match h with
         | x, y -> get_names_rec (acc ^ "  -  " ^ x ^ "\n") t
       end
-    | [] -> acc ^ "\n"
+    | [] ->
+        if String.length acc > 0 then acc ^ "\n"
+        else "\n  -Database management system is empty.\n\n"
   in
   get_names_rec "" list
 
@@ -209,26 +221,26 @@ let list_rows (database_name : string) =
         let rec list_vals_rec vals acc =
           match vals with
           | (name, value) :: t ->
-              if List.length t != List.length database_row_list then
-                list_vals_rec t "(" ^ name ^ ": "
+              if List.length t > 0 then
+                list_vals_rec t ",  (" ^ name ^ ": "
                 ^ Yojson.Basic.Util.to_string value
-                ^ "),  " ^ acc
+                ^ ")" ^ acc
               else
                 (*end of list case no comma*)
                 list_vals_rec t "(" ^ name ^ ": "
                 ^ Yojson.Basic.Util.to_string value
-                ^ ")  " ^ acc
-          | [] -> "\n - " ^ acc
+                ^ ")" ^ acc
+          | [] -> acc
         in
 
         list_rows_rec t
           (list_vals_rec
              (List.rev (Yojson.Basic.Util.to_assoc val_list))
-             "")
-        ^ acc ^ "\n"
+             "\n")
+        ^ acc
     | [] ->
-        if String.length acc > 0 then acc ^ "\n\n"
+        if String.length acc > 1 then acc
         else "\n - Database is empty.\n\n"
   in
 
-  list_rows_rec database_row_list ""
+  list_rows_rec database_row_list "\n"
