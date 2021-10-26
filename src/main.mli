@@ -78,10 +78,12 @@ val find_value_in_database : string -> string -> string -> string
     "Value not found in database" if the [value_name] is not in
     [database_name]. *)
 
-val get_db_names_list : unit -> string
-(**return a string of each database name in the system, each separated
-   by a newline for printing into console.*)
+val get_db_names_list : string -> string
+(** [get_db_names_list file] returns a string of each database name in
+    the system in [file], each separated by a newline for printing into
+    console. *)
 
-val list_rows : string -> string
-(**returns string of field-value pairs for each row a database given by
-   [database_name], with each row separated by a newline*)
+val list_rows : string -> string -> string
+(** [list_rows file database_name] returns string of field-value pairs
+    for each row a database inf [file] given by [database_name], with
+    each row separated by a newline*)

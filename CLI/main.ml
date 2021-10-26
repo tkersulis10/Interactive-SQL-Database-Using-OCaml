@@ -253,9 +253,9 @@ let main () =
       end
     | List ->
         ANSITerminal.print_string [ ANSITerminal.red ] "\nDatabases:\n";
-        print_string (get_db_names_list ())
+        print_string (get_db_names_list "database.json")
     | ListRows name -> begin
-        match list_rows name with
+        match list_rows "database.json" name with
         | exception DatabaseNotFound name ->
             print_string "\nDatabase ";
             ANSITerminal.print_string [ ANSITerminal.red ] name;
@@ -264,7 +264,7 @@ let main () =
             print_string "\nRows of database ";
             ANSITerminal.print_string [ ANSITerminal.red ] name;
             print_string ":\n";
-            print_string (list_rows name)
+            print_string (list_rows "database.json" name)
       end
     | Quit ->
         print_endline "\nChanges have been saved. Exiting...\n\n";

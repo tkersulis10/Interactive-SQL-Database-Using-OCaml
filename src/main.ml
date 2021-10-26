@@ -190,10 +190,8 @@ let find_value_in_database
   in
   scan_database database_entry_list ""
 
-let get_db_names_list () =
-  let list =
-    Yojson.Basic.Util.to_assoc (dbs_from_file "database.json")
-  in
+let get_db_names_list (file : string) =
+  let list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let rec get_names_rec acc list =
     match list with
     | h :: t -> begin
@@ -206,9 +204,9 @@ let get_db_names_list () =
   in
   get_names_rec "" list
 
-let list_rows (database_name : string) =
+let list_rows (file : string) (database_name : string) =
   let database_row_list =
-    find_database "database.json" database_name
+    find_database file database_name
     |> Yojson.Basic.Util.to_list |> List.tl |> List.rev
   in
 
