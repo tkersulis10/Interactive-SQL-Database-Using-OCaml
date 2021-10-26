@@ -167,28 +167,21 @@ let main_tests =
        match a database, causing non-empty file (top database)"
       "test_helper_database.json" "Users"
       "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\"}]}";
-    (let _ =
-       add_database "empty_database.json" "Hi" [ "1"; "2"; "3" ]
-     in
-     let _ =
-       add_database "empty_database.json" "Cornell"
-         [ "Engineering"; "Sciences"; "Arts" ]
-     in
-     clear_database_file_test
-       "clear_database_file_test for empty_database.json"
-       "empty_database.json" "{}");
+    clear_database_file_test
+      "clear_database_file_test for empty_database.json"
+      "empty_database.json" "{}";
     clear_database_test
       "clear_database for test_database2.json where name does not \
        match a database"
       "test_database2.json" "CS3110"
       (Yojson.Basic.to_string test_database_helper);
-    (let _ =
-       add_database "empty_database.json" "testDB4" [ "1"; "2"; "3" ]
-     in
-     clear_database_test
-       "clear_database for empty_database.json where name does match a \
-        database"
-       "empty_database.json" "testDB4" "{\"testDB4\":[{}]}");
+    add_database_test "add testDB4 to empty_database.json"
+      "empty_database.json" "testDB4" [ "1"; "2"; "3" ]
+      "{\"testDB4\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\"}]}";
+    clear_database_test
+      "clear_database for empty_database.json where name does match a \
+       database"
+      "empty_database.json" "testDB4" "{\"testDB4\":[{}]}";
     find_database_test
       "find_database for test_database.json when the database does \
        exist in file"
