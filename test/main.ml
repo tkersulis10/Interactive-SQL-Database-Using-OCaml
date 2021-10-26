@@ -2,9 +2,11 @@ open OUnit2
 open Database
 open Main
 
-let test_database_1 = dbs_from_file "database.json"
+let test_database_helper = dbs_from_file "test_helper_database.json"
 
-let test_database_2 = dbs_from_file "test_database.json"
+let test_database_1 = dbs_from_file "test_database.json"
+
+let test_database_2 = dbs_from_file "test_database2.json"
 
 (** [identity s] outputs the same string string [s] that is input. *)
 let identity (s : string) : string = s
@@ -71,7 +73,7 @@ let delete_database_test
   let _ = delete_database file database_name in
   name >:: fun _ ->
   assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.Util.to_string)
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
     ~printer:identity
 
 (** [clear_database_file_test name input expected_output] creates an
@@ -85,7 +87,7 @@ let clear_database_file_test
   let _ = clear_database_file input in
   name >:: fun _ ->
   assert_equal expected_output
-    (input |> dbs_from_file |> Yojson.Basic.Util.to_string)
+    (input |> dbs_from_file |> Yojson.Basic.to_string)
     ~printer:identity
 
 (** [clear_database_test name file database_name expected_output]
@@ -100,7 +102,7 @@ let clear_database_test
   let _ = clear_database file database_name in
   name >:: fun _ ->
   assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.Util.to_string)
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
     ~printer:identity
 
 (** [find_database_test name file database_name expected_output] creates
@@ -113,7 +115,10 @@ let find_database_test
     (expected_output : string) =
   name >:: fun _ ->
   assert_equal expected_output
-    (Yojson.Basic.Util.to_string (find_database file database_name))
+    (find_database file database_name
+    |> Yojson.Basic.Util.to_list
+    |> List.map (fun x -> Yojson.Basic.to_string x)
+    |> String.concat ", ")
     ~printer:identity
 
 (** [find_database_test name file database_name expected_output] creates
@@ -132,64 +137,88 @@ let find_value_in_database_test
 
 let main_tests =
   [
-    database_list_test "database_list for database.json" "database.json"
-      "{\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"}}";
-    write_to_file_test "write_to_file for database.json"
-      "test_database.json" test_database_1 test_database_1;
-    splice_outer_parens_test "splice_outer_parens for database.json"
-      (database_string "database.json")
-      "\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"},";
+    database_list_test "database_list for test_database.json"
+      "test_database.json"
+      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"is \
+       writing code right \
+       now.\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}]}";
+    write_to_file_test "write_to_file for test_database2.json"
+      "test_database2.json" test_database_helper test_database_helper;
+    splice_outer_parens_test
+      "splice_outer_parens for test_database.json"
+      (database_string "test_database.json")
+      "\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"is \
+       writing code right \
+       now.\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}],";
+    ( "delete_database for test_database.json where name does not \
+       match a database"
+    >:: fun _ ->
+      assert_raises (DatabaseNotFound "Hello") (fun () ->
+          delete_database "test_database.json" "Hello") );
     add_database_test "add_database for empty_database.json"
-      "empty_database.json" "test_database" [ "hi"; "bye" ]
-      "\"test_database\":{\"hi\":\"\",\"bye\":\"\"}";
+      "empty_database.json" "TEST" [ "hi"; "bye" ]
+      "{\"TEST\":[{\"hi\":\"\",\"bye\":\"\"}]}";
     delete_database_test
-      "delete_database for database.json where name does not match a \
-       database"
-      "database.json" "Hello"
-      "{\"testDB2\":{\"t1\":\"\",\"t2\":\"\",\"t3\":\"\"}}";
+      "delete_database for empty_database.json where name does match a \
+       database, causing empty file"
+      "test_database3.json" "Users" "{}";
     delete_database_test
-      "delete_database for database.json where name does match a \
-       database"
-      "database.json" "testDB2" "{}";
-    clear_database_file_test
-      "clear_database_file_test for empty_database.json"
-      "empty_database.json" "{}";
-    clear_database_test
-      "clear_database for test_database.json where name does not match \
-       a database"
-      "test_database.json" "CS3110"
-      (Yojson.Basic.to_string test_database_2);
+      "delete_database for test_helper_database.json where name does \
+       match a database, causing non-empty file (top database)"
+      "test_helper_database.json" "Users"
+      "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\"}]}";
     (let _ =
-       add_database "test_database.json" "testDB4" [ "1"; "2"; "3" ]
+       add_database "empty_database.json" "Hi" [ "1"; "2"; "3" ]
+     in
+     let _ =
+       add_database "empty_database.json" "Cornell"
+         [ "Engineering"; "Sciences"; "Arts" ]
+     in
+     clear_database_file_test
+       "clear_database_file_test for empty_database.json"
+       "empty_database.json" "{}");
+    clear_database_test
+      "clear_database for test_database2.json where name does not \
+       match a database"
+      "test_database2.json" "CS3110"
+      (Yojson.Basic.to_string test_database_helper);
+    (let _ =
+       add_database "empty_database.json" "testDB4" [ "1"; "2"; "3" ]
      in
      clear_database_test
-       "clear_database for test_database.json where name does match a \
+       "clear_database for empty_database.json where name does match a \
         database"
-       "test_database.json" "testDB4" "{\"testDB2\":[{}]}");
-    (let _ = add_database "database.json" "testDB3" [ "1"; "2"; "3" ] in
-     find_database_test
-       "find_database for database.json when the database does exist \
-        in file"
-       "database.json" "testDB3" "{\"1\":\"\",\"1\":\"\",\"3\":\"\"}");
-    ( "find_database for database.json when the database does not \
-       exist in the file"
+       "empty_database.json" "testDB4" "{\"testDB4\":[{}]}");
+    find_database_test
+      "find_database for test_database.json when the database does \
+       exist in file"
+      "test_database.json" "test"
+      "{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}, \
+       {\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}";
+    ( "find_database for empty_database.json when the database does \
+       not exist in the file"
     >:: fun _ ->
       assert_raises (DatabaseNotFound "testDB78") (fun () ->
-          find_database "database.json" "testDB78") );
+          find_database "empty_database.json" "testDB78") );
     find_value_in_database_test
-      "find_value_in_database for database.json when value does exist \
-       in database"
-      "database.json" "testDB3" "2" "\"\"";
-    ( "find_value_in_database for database.json when the value does \
-       not exist in the database"
+      "find_value_in_database for test_database.json when value does \
+       exist in database (bottom database)"
+      "test_database.json" "test" "4" "\n\"d\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database.json when value does \
+       exist in database (top database)"
+      "test_database.json" "Users" "name" "\n\"Max\"";
+    ( "find_value_in_database for test_database.json when the value \
+       does not exist in the database"
     >:: fun _ ->
-      assert_raises (ValNotFound "4") (fun () ->
-          find_value_in_database "database.json" "testDB3" "4") );
-    ( "find_value_in_database for database.json when the database does \
-       not exist in the file, but the value does exist in the file"
+      assert_raises (ValNotFound "5550") (fun () ->
+          find_value_in_database "test_database.json" "Users" "5550") );
+    ( "find_value_in_database for test_database.json when the database \
+       does not exist in the file, but the value does exist in the \
+       file"
     >:: fun _ ->
-      assert_raises (ValNotFound "3") (fun () ->
-          find_value_in_database "database.json" "testDB0" "3") );
+      assert_raises (DatabaseNotFound "testDB0") (fun () ->
+          find_value_in_database "test_database.json" "testDB0" "20") );
   ]
 
 let suite =

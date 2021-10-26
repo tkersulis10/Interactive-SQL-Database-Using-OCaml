@@ -86,7 +86,7 @@ let delete_database_helper
     | [] -> if deleted then acc else raise (DatabaseNotFound name)
     | ((str, values) as h) :: t ->
         if str = name then delete_aux name t true acc
-        else delete_aux name t false (acc @ [ h ])
+        else delete_aux name t deleted (acc @ [ h ])
   in
   delete_aux name databases false []
 

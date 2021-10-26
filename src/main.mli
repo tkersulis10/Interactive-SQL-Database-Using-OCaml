@@ -10,7 +10,7 @@ exception DatabaseNotFound of string
     database. *)
 
 val file_location : string
-(**Default file path of main DBMS*)
+(** Default file path of main DBMS*)
 
 val set_file_location : string -> string
 (** [set_file_location file] sets the location of the file [file] for
@@ -54,8 +54,8 @@ val delete_database : string -> string -> unit
 (** [delete_database file name] removes the database with name [name]
     from the database file [file]. Removes the first instance of a
     database with name [name] in [file] if there are multiple databases
-    with the same name. If [name] is not in database file [file], then
-    the same file is returned unchanged. *)
+    with the same name. Raises: DatabaseNotFound "database_name" if the
+    [database_name] is not in [file]. *)
 
 val clear_database : string -> string -> unit
 (** [clear_database file name] clears te database with name [name] from
@@ -67,15 +67,15 @@ val clear_database : string -> string -> unit
 
 val find_database : string -> string -> Yojson.Basic.t
 (** [find_database file database_name] returns the values of the
-    database [database_name] in database file [file]. Raises: NotFound
-    "Database not found in file" if the [database_name] is not in
-    [database_list]. *)
+    database [database_name] in database file [file]. Raises:
+    DatabaseNotFound "database_name" if the [database_name] is not in
+    [file]. *)
 
 val find_value_in_database : string -> string -> string -> string
 (** [find_value_in_database file database_name value_name] returns the
     value associated with the value [value_name] in the database
-    [database_name]. Requires: The value is a string. Raises: NotFound
-    "Value not found in database" if the [value_name] is not in
+    [database_name]. Requires: The value is a string. Raises:
+    ValNotFound "value_name" if the [value_name] is not in
     [database_name]. *)
 
 val get_db_names_list : string -> string
