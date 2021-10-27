@@ -242,3 +242,51 @@ let list_rows (file : string) (database_name : string) =
   in
 
   list_rows_rec database_row_list "\n"
+
+(** [add_value_helper database_list database_name new_database] creates
+    a string representing a json (without the first "{") with
+    [new_database] in place for database [database_name] in
+    [database_list]. *)
+let rec add_value_helper
+    (database_list : (string * Basic.t) list)
+    (database_name : string)
+    (new_database : string) =
+  match database_list with
+  | [] -> "}"
+  | (name, values) :: t ->
+      if name = database_name then
+        "," ^ name ^ ": " ^ new_database
+        ^ add_value_helper t database_name new_database
+      else
+        "," ^ name ^ ": "
+        ^ Yojson.Basic.to_string values
+        ^ add_value_helper t database_name new_database
+
+let add_value_to_database
+    (file : string)
+    (database_name : string)
+    (value_name : string) =
+  let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+  let database_string =
+    find_database file database_name |> Yojson.Basic.to_string
+  in
+  let table_list = String.split_on_char '}' database_string in
+  let template = List.hd table_list ^ ",\"" ^ value_name ^ "\":\"\"" in
+  if List.length table_list < 3 then
+    let str = template ^ "}]" in
+    let new_str =
+      let after_helper =
+        add_value_helper database_list database_name str
+      in
+      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+    in
+    write_to_file file (Yojson.Basic.from_string new_str)
+  else
+    let str = template ^ "}" ^ String.concat "}" (List.tl table_list) in
+    let new_str =
+      let after_helper =
+        add_value_helper database_list database_name str
+      in
+      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+    in
+    write_to_file file (Yojson.Basic.from_string new_str)

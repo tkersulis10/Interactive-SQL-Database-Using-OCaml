@@ -85,5 +85,9 @@ val get_db_names_list : string -> string
 
 val list_rows : string -> string -> string
 (** [list_rows file database_name] returns string of field-value pairs
-    for each row a database inf [file] given by [database_name], with
-    each row separated by a newline*)
+    for each row a database in [file] given by [database_name], with
+    each row separated by a newline. *)
+
+val add_value_to_database : string -> string -> string -> unit
+(** [add_value_to_database file database_name value_name] adds the value
+    [value_name] to the template of database [database_name] in [file]. *)
