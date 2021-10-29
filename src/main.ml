@@ -243,11 +243,11 @@ let list_rows (file : string) (database_name : string) =
 
   list_rows_rec database_row_list "\n"
 
-(** [add_value_helper database_list database_name new_database] creates
-    a string representing a json (without the first "{") with
+(** [add_element_helper database_list database_name new_database]
+    creates a string representing a json (without the first "{") with
     [new_database] in place for database [database_name] in
     [database_list]. *)
-let rec add_value_helper
+let rec add_element_helper
     (database_list : (string * Basic.t) list)
     (database_name : string)
     (new_database : string) =
@@ -256,13 +256,13 @@ let rec add_value_helper
   | (name, values) :: t ->
       if name = database_name then
         "," ^ name ^ ": " ^ new_database
-        ^ add_value_helper t database_name new_database
+        ^ add_element_helper t database_name new_database
       else
         "," ^ name ^ ": "
         ^ Yojson.Basic.to_string values
-        ^ add_value_helper t database_name new_database
+        ^ add_element_helper t database_name new_database
 
-let add_value_to_database
+let add_element_to_database
     (file : string)
     (database_name : string)
     (value_name : string) =
@@ -276,7 +276,7 @@ let add_value_to_database
     let str = template ^ "}]" in
     let new_str =
       let after_helper =
-        add_value_helper database_list database_name str
+        add_element_helper database_list database_name str
       in
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
@@ -285,8 +285,40 @@ let add_value_to_database
     let str = template ^ "}" ^ String.concat "}" (List.tl table_list) in
     let new_str =
       let after_helper =
-        add_value_helper database_list database_name str
+        add_element_helper database_list database_name str
       in
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
     write_to_file file (Yojson.Basic.from_string new_str)
+
+(** [string_value_adder table_list value_name] adds the element
+    [value_name] to all the rows in the database represented by a list
+    of strings [table_list]. *)
+let rec string_value_adder
+    (table_list : string list)
+    (value_name : string) =
+  match table_list with
+  | [] -> ""
+  | h :: t ->
+      if h = "]" then "]"
+      else
+        h ^ ",\"" ^ value_name ^ "\":\"\"}"
+        ^ string_value_adder t value_name
+
+let add_element_to_all_database
+    (file : string)
+    (database_name : string)
+    (value_name : string) =
+  let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+  let database_string =
+    find_database file database_name |> Yojson.Basic.to_string
+  in
+  let table_list = String.split_on_char '}' database_string in
+  let new_database = string_value_adder table_list value_name in
+  let new_str =
+    let after_helper =
+      add_element_helper database_list database_name new_database
+    in
+    "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+  in
+  write_to_file file (Yojson.Basic.from_string new_str)

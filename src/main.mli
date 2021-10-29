@@ -88,6 +88,12 @@ val list_rows : string -> string -> string
     for each row a database in [file] given by [database_name], with
     each row separated by a newline. *)
 
-val add_value_to_database : string -> string -> string -> unit
-(** [add_value_to_database file database_name value_name] adds the value
-    [value_name] to the template of database [database_name] in [file]. *)
+val add_element_to_database : string -> string -> string -> unit
+(** [add_element_to_database file database_name value_name] adds the
+    element [value_name] to the template of database [database_name] in
+    [file]. *)
+
+val add_element_to_all_database : string -> string -> string -> unit
+(** [add_element_to_all_database file database_name value_name] adds the
+    element [value_name] to all rows of the database [database_name] in
+    [file]. *)
