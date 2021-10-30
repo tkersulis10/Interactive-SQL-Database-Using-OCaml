@@ -398,3 +398,41 @@ let update_element
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
     write_to_file file (Yojson.Basic.from_string new_str)
+
+(** [first_n_rows table_list number_rows] returns the first
+    [number_rows] in [table_list]. *)
+let rec first_n_rows (table_list : string list) (number_rows : int) =
+  match table_list with
+  | [] -> []
+  | h :: t ->
+      if number_rows > 0 then h :: first_n_rows t (number_rows - 1)
+      else []
+
+(** [update_all_helper list_of_element_rows file database_name value_name new_value]
+    applies [update_element file database_name value_name h new_value]
+    to each element h in the element_row list [list_of_element_rows]. *)
+let rec update_all_helper
+    (list_of_element_rows : int list)
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (new_value : string) =
+  match list_of_element_rows with
+  | [] -> ()
+  | h :: t ->
+      update_element file database_name value_name h new_value;
+      update_all_helper t file database_name value_name new_value
+
+let update_all
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (new_value : string) =
+  let database_string =
+    find_database file database_name |> Yojson.Basic.to_string
+  in
+  let table_list = List.tl (String.split_on_char '}' database_string) in
+  let number_rows = List.length table_list - 1 in
+  let list_of_element_rows = List.init number_rows (fun x -> x + 1) in
+  update_all_helper list_of_element_rows file database_name value_name
+    new_value
