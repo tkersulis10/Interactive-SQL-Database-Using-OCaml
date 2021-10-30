@@ -9,6 +9,9 @@ exception DatabaseNotFound of string
 (** Raised when a database is searched for and not found in a file or
     database. *)
 
+exception InvalidRow of string
+(** Raised when an invalid row is searched for in a database. *)
+
 val file_location : string
 (** Default file path of main DBMS*)
 
@@ -97,3 +100,13 @@ val add_element_to_all_database : string -> string -> string -> unit
 (** [add_element_to_all_database file database_name value_name] adds the
     element [value_name] to all rows of the database [database_name] in
     [file]. *)
+
+val update_element : string -> string -> string -> int -> string -> unit
+(** [update_element file database_name value_name element_row new_value]
+    updates the element in [file] in [database_name] with element name
+    [value_name] in the [element_row]th row of the database with new
+    value [new_value]. The first row after the template row in the
+    database corresponds to [element_row] = 1. If value_name is not
+    [database_name] or [database_name] not in [file] then nothing
+    changes. Requires: [element_row] >= 1 and is a valid row in the
+    [database_name]. *)

@@ -7,6 +7,8 @@ exception DatabaseNotFound of string
 
 exception ValNotFound of string
 
+exception InvalidRow of string
+
 let set_file_location (file : string) : string = "./data/" ^ file
 
 (** File location, accessible via this function in the event the
@@ -255,10 +257,10 @@ let rec add_element_helper
   | [] -> "}"
   | (name, values) :: t ->
       if name = database_name then
-        "," ^ name ^ ": " ^ new_database
+        "," ^ "\"" ^ name ^ "\": " ^ new_database
         ^ add_element_helper t database_name new_database
       else
-        "," ^ name ^ ": "
+        "," ^ "\"" ^ name ^ "\": "
         ^ Yojson.Basic.to_string values
         ^ add_element_helper t database_name new_database
 
@@ -322,3 +324,77 @@ let add_element_to_all_database
     "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
   in
   write_to_file file (Yojson.Basic.from_string new_str)
+
+(** [update_row_finder table_list element_row] finds the [element_row]th
+    row in [table_list]. *)
+let rec update_row_finder (table_list : string list) (element_row : int)
+    =
+  match table_list with
+  | [] -> raise (InvalidRow "Row not in database")
+  | h :: t ->
+      if element_row = 0 then h
+      else update_row_finder t (element_row - 1)
+
+(** [update_row_in_database table_list element_row new_row] formats the
+    database with the rows in [table_list] with [new_row] inserted into
+    [element_row]'s position in the row. *)
+let rec update_row_in_database
+    (table_list : string list)
+    (element_row : int)
+    (new_row : string) =
+  match table_list with
+  | [] -> ""
+  | h :: t ->
+      if element_row = 0 then
+        "}" ^ new_row
+        ^ update_row_in_database t (element_row - 1) new_row
+      else "}" ^ h ^ update_row_in_database t (element_row - 1) new_row
+
+let update_element
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (element_row : int)
+    (new_value : string) =
+  if element_row = 0 then raise (InvalidRow "Row not in database")
+  else
+    let database_list =
+      Yojson.Basic.Util.to_assoc (dbs_from_file file)
+    in
+    let database_string =
+      find_database file database_name |> Yojson.Basic.to_string
+    in
+    let table_list = String.split_on_char '}' database_string in
+    let wanted_row = update_row_finder table_list element_row in
+    let clean_row =
+      String.sub wanted_row 1 (String.length wanted_row - 1) ^ "}"
+    in
+    let value_list =
+      clean_row |> Yojson.Basic.from_string
+      |> Yojson.Basic.Util.to_assoc
+    in
+    let new_unclean_row =
+      add_element_helper value_list value_name new_value
+    in
+    let new_unclean_row2 =
+      String.sub new_unclean_row 0 (String.length new_unclean_row - 1)
+    in
+    let new_row =
+      ",{"
+      ^ String.sub new_unclean_row2 1
+          (String.length new_unclean_row2 - 1)
+    in
+    let new_database_before_format =
+      update_row_in_database table_list element_row new_row
+    in
+    let new_database =
+      String.sub new_database_before_format 1
+        (String.length new_database_before_format - 1)
+    in
+    let new_str =
+      let after_helper =
+        add_element_helper database_list database_name new_database
+      in
+      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+    in
+    write_to_file file (Yojson.Basic.from_string new_str)
