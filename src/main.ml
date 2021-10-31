@@ -325,6 +325,24 @@ let add_element_to_all_database
   in
   write_to_file file (Yojson.Basic.from_string new_str)
 
+(** [update_element_helper value_list value_name new_value] creates a
+    string representing a table row with [new_value] in place for
+    database [value_name] in [value_list]. *)
+let rec update_element_helper
+    (value_list : (string * Basic.t) list)
+    (value_name : string)
+    (new_value : string) =
+  match value_list with
+  | [] -> "}"
+  | (name, values) :: t ->
+      if name = value_name then
+        "," ^ "\"" ^ name ^ "\": \"" ^ new_value ^ "\""
+        ^ update_element_helper t value_name new_value
+      else
+        "," ^ "\"" ^ name ^ "\": "
+        ^ Yojson.Basic.to_string values
+        ^ update_element_helper t value_name new_value
+
 (** [update_row_finder table_list element_row] finds the [element_row]th
     row in [table_list]. *)
 let rec update_row_finder (table_list : string list) (element_row : int)
@@ -374,7 +392,7 @@ let update_element
       |> Yojson.Basic.Util.to_assoc
     in
     let new_unclean_row =
-      add_element_helper value_list value_name new_value
+      update_element_helper value_list value_name new_value
     in
     let new_unclean_row2 =
       String.sub new_unclean_row 0 (String.length new_unclean_row - 1)
