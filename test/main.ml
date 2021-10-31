@@ -135,6 +135,104 @@ let find_value_in_database_test
     (find_value_in_database file database_name value_name)
     ~printer:identity
 
+(** [get_db_names_list_test name input expected_output] creates an OUnit
+    test with name [name] that compares whether
+    [get_db_names_list input] is equal to [expected_output]. *)
+let get_db_names_list_test
+    (name : string)
+    (input : string)
+    (expected_output : string) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (get_db_names_list input)
+    ~printer:identity
+
+(** [list_rows_test name input expected_output] creates an OUnit test
+    with name [name] that compares whether
+    [list_rows file database_name] is equal to [expected_output]. *)
+let list_rows_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (expected_output : string) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (list_rows file database_name)
+    ~printer:identity
+
+(** [add_element_to_database_test name file database_name value_name expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling
+    [add_element_to_database file database_name value_name]. *)
+let add_element_to_database_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (expected_output : string) =
+  let _ = add_element_to_database file database_name value_name in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
+    ~printer:identity
+
+(** [add_element_to_all_database_test name file database_name value_name expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling
+    [add_element_to_all_database file database_name value_name]. *)
+let add_element_to_all_database_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (expected_output : string) =
+  let _ = add_element_to_all_database file database_name value_name in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
+    ~printer:identity
+
+(** [update_element_test name file database_name value_name element_row new_value expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling
+    [update_element file database_name value_name element_row new_value]. *)
+let update_element_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (element_row : int)
+    (new_value : string)
+    (expected_output : string) =
+  let _ =
+    update_element file database_name value_name element_row new_value
+  in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
+    ~printer:identity
+
+(** [update_all_test name file database_name value_name new_value expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
+    [expected_output] after calling
+    [update_all file database_name value_name new_value]. *)
+let update_element_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (value_name : string)
+    (new_value : string)
+    (expected_output : string) =
+  let _ = update_all file database_name value_name new_value in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
+    ~printer:identity
+
 let main_tests =
   [
     database_list_test "database_list for test_database.json"
@@ -214,7 +312,20 @@ let main_tests =
           find_value_in_database "test_database.json" "testDB0" "20") );
   ]
 
+let update_tests =
+  [
+    get_db_names_list_test "get_db_names_list for test_database.json"
+      "test_database.json" "  -  Users\n  -  test\n\n";
+    list_rows_test "list_rows for Users in test_database.json"
+      "test_database.json" "Users"
+      "(name: Max),  (age: 20),  (fact: is writing code right now.)\n\n";
+    list_rows_test "list_rows for test in test_database.json"
+      "test_database.json" "test"
+      "(1: a),  (2: b),  (3: c),  (4: d),  (5: e)\n\n";
+  ]
+
 let suite =
-  "test suite for final project" >::: List.flatten [ main_tests ]
+  "test suite for final project"
+  >::: List.flatten [ main_tests; update_tests ]
 
 let _ = run_test_tt_main suite
