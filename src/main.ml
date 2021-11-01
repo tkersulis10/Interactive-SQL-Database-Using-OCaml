@@ -374,7 +374,7 @@ let update_element
     (value_name : string)
     (element_row : int)
     (new_value : string) =
-  if element_row = 0 then raise (InvalidRow "Row not in database")
+  if element_row < 1 then raise (InvalidRow "Row cannot be less than 1")
   else
     let database_list =
       Yojson.Basic.Util.to_assoc (dbs_from_file file)
@@ -383,39 +383,42 @@ let update_element
       find_database file database_name |> Yojson.Basic.to_string
     in
     let table_list = String.split_on_char '}' database_string in
-    let wanted_row = update_row_finder table_list element_row in
-    let clean_row =
-      String.sub wanted_row 1 (String.length wanted_row - 1) ^ "}"
-    in
-    let value_list =
-      clean_row |> Yojson.Basic.from_string
-      |> Yojson.Basic.Util.to_assoc
-    in
-    let new_unclean_row =
-      update_element_helper value_list value_name new_value
-    in
-    let new_unclean_row2 =
-      String.sub new_unclean_row 0 (String.length new_unclean_row - 1)
-    in
-    let new_row =
-      ",{"
-      ^ String.sub new_unclean_row2 1
-          (String.length new_unclean_row2 - 1)
-    in
-    let new_database_before_format =
-      update_row_in_database table_list element_row new_row
-    in
-    let new_database =
-      String.sub new_database_before_format 1
-        (String.length new_database_before_format - 1)
-    in
-    let new_str =
-      let after_helper =
-        add_element_helper database_list database_name new_database
+    if element_row > List.length table_list - 2 then
+      raise (InvalidRow "Row not in database")
+    else
+      let wanted_row = update_row_finder table_list element_row in
+      let clean_row =
+        String.sub wanted_row 1 (String.length wanted_row - 1) ^ "}"
       in
-      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
-    in
-    write_to_file file (Yojson.Basic.from_string new_str)
+      let value_list =
+        clean_row |> Yojson.Basic.from_string
+        |> Yojson.Basic.Util.to_assoc
+      in
+      let new_unclean_row =
+        update_element_helper value_list value_name new_value
+      in
+      let new_unclean_row2 =
+        String.sub new_unclean_row 0 (String.length new_unclean_row - 1)
+      in
+      let new_row =
+        ",{"
+        ^ String.sub new_unclean_row2 1
+            (String.length new_unclean_row2 - 1)
+      in
+      let new_database_before_format =
+        update_row_in_database table_list element_row new_row
+      in
+      let new_database =
+        String.sub new_database_before_format 1
+          (String.length new_database_before_format - 1)
+      in
+      let new_str =
+        let after_helper =
+          add_element_helper database_list database_name new_database
+        in
+        "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+      in
+      write_to_file file (Yojson.Basic.from_string new_str)
 
 (** [first_n_rows table_list number_rows] returns the first
     [number_rows] in [table_list]. *)
