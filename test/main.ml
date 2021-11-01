@@ -11,98 +11,26 @@ let test_database_2 = dbs_from_file "test_database2.json"
 (** [identity s] outputs the same string string [s] that is input. *)
 let identity (s : string) : string = s
 
-(** [database_list_test name input expected_output] creates an OUnit
+(** [database_string_test name input expected_output] creates an OUnit
     test with name [name] and ensures that [expected_output] is equal to
     [database_list input]. *)
-let database_list_test
+let database_string_test
     (name : string)
     (input : string)
     (expected_output : string) =
   name >:: fun _ ->
   assert_equal expected_output (database_string input) ~printer:identity
 
-(** [write_to_file_test name file db expected_output] creates an OUnit
-    test with name [name] that compares whether [write_to_file file db]
-    writes the same database to [file] as [expected_output]. *)
-let write_to_file_test
-    (name : string)
-    (file : string)
-    (db : Yojson.Basic.t)
-    expected_output =
-  let _ = write_to_file file db in
-  name >:: fun _ ->
-  assert_equal expected_output (dbs_from_file file)
-    ~printer:Yojson.Basic.to_string
-
 (** [splice_outer_parens_test name input expected_output] creates an
     OUnit test with name [name] and ensures that [expected_output] is
-    equal to [splice_outer_parens input]. *)
+    equal to [splice_outer_parens (database_string input)]. *)
 let splice_outer_parens_test
     (name : string)
     (input : string)
     (expected_output : string) =
   name >:: fun _ ->
   assert_equal expected_output
-    (splice_outer_parens input)
-    ~printer:identity
-
-(** [add_database_test name file database_name values expected_output]
-    creates an OUnit test with name [name] that compares whether
-    [add_database file database_name values] writes the same database to
-    [file] as [expected_output]. *)
-let add_database_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (values : string list)
-    (expected_output : string) =
-  let _ = add_database file database_name values in
-  name >:: fun _ ->
-  assert_equal expected_output (database_string file) ~printer:identity
-
-(** [delete_database_test name file database_name expected_output]
-    creates an OUnit test with name [name] that compares whether
-    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling
-    [delete_database file database_name]. *)
-let delete_database_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (expected_output : string) =
-  let _ = delete_database file database_name in
-  name >:: fun _ ->
-  assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.to_string)
-    ~printer:identity
-
-(** [clear_database_file_test name input expected_output] creates an
-    OUnit test with name [name] that compares whether
-    [input |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling [clear_database_file input]. *)
-let clear_database_file_test
-    (name : string)
-    (input : string)
-    (expected_output : string) =
-  let _ = clear_database_file input in
-  name >:: fun _ ->
-  assert_equal expected_output
-    (input |> dbs_from_file |> Yojson.Basic.to_string)
-    ~printer:identity
-
-(** [clear_database_test name file database_name expected_output]
-    creates an OUnit test with name [name] that compares whether
-    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling [clear_database file database_name]. *)
-let clear_database_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (expected_output : string) =
-  let _ = clear_database file database_name in
-  name >:: fun _ ->
-  assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.to_string)
+    (splice_outer_parens (database_string input))
     ~printer:identity
 
 (** [find_database_test name file database_name expected_output] creates
@@ -123,7 +51,8 @@ let find_database_test
 
 (** [find_database_test name file database_name expected_output] creates
     an OUnit test with name [name] that compares whether
-    [find_database file database_name] is equal to [expected_output]. *)
+    [find_value_in_database file database_name value_name] is equal to
+    [expected_output]. *)
 let find_value_in_database_test
     (name : string)
     (file : string)
@@ -147,8 +76,8 @@ let get_db_names_list_test
     (get_db_names_list input)
     ~printer:identity
 
-(** [list_rows_test name input expected_output] creates an OUnit test
-    with name [name] that compares whether
+(** [list_rows_test name file database_name expected_output] creates an
+    OUnit test with name [name] that compares whether
     [list_rows file database_name] is equal to [expected_output]. *)
 let list_rows_test
     (name : string)
@@ -158,23 +87,6 @@ let list_rows_test
   name >:: fun _ ->
   assert_equal expected_output
     (list_rows file database_name)
-    ~printer:identity
-
-(** [add_element_to_database_test name file database_name value_name expected_output]
-    creates an OUnit test with name [name] that compares whether
-    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling
-    [add_element_to_database file database_name value_name]. *)
-let add_element_to_database_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (value_name : string)
-    (expected_output : string) =
-  let _ = add_element_to_database file database_name value_name in
-  name >:: fun _ ->
-  assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.to_string)
     ~printer:identity
 
 (** [add_element_to_all_database_test name file database_name value_name expected_output]
@@ -194,111 +106,140 @@ let add_element_to_all_database_test
     (file |> dbs_from_file |> Yojson.Basic.to_string)
     ~printer:identity
 
-(** [update_element_test name file database_name value_name element_row new_value expected_output]
-    creates an OUnit test with name [name] that compares whether
+(** [update_file_test name file expected_output] creaes an OUnit test
+    with name [name] that compares whether
     [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling
-    [update_element file database_name value_name element_row new_value]. *)
-let update_element_test
+    [expected_output] after a series of manipulations to [file]. *)
+let update_file_test
     (name : string)
     (file : string)
-    (database_name : string)
-    (value_name : string)
-    (element_row : int)
-    (new_value : string)
     (expected_output : string) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (file |> dbs_from_file |> Yojson.Basic.to_string)
+    ~printer:identity
+
+let first_section_tests =
+  let _ = write_to_file "empty_database.json" test_database_1 in
+  let _ = delete_database "empty_database.json" "Users" in
+  let _ = clear_database "empty_database.json" "test" in
   let _ =
-    update_element file database_name value_name element_row new_value
+    add_database "empty_database.json" "Cornell"
+      [ "Engineering"; "CALS"; "A&S" ]
   in
-  name >:: fun _ ->
-  assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.to_string)
-    ~printer:identity
-
-(** [update_all_test name file database_name value_name new_value expected_output]
-    creates an OUnit test with name [name] that compares whether
-    [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
-    [expected_output] after calling
-    [update_all file database_name value_name new_value]. *)
-let update_element_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (value_name : string)
-    (new_value : string)
-    (expected_output : string) =
-  let _ = update_all file database_name value_name new_value in
-  name >:: fun _ ->
-  assert_equal expected_output
-    (file |> dbs_from_file |> Yojson.Basic.to_string)
-    ~printer:identity
-
-let main_tests =
+  let _ =
+    add_database "empty_database.json" "Users" [ "Tomas"; "Max" ]
+  in
+  let _ =
+    add_element_to_database "empty_database.json" "Cornell" "Hotel"
+  in
   [
-    database_list_test "database_list for test_database.json"
-      "test_database.json"
-      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"is \
-       writing code right \
-       now.\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}]}";
-    write_to_file_test "write_to_file for test_database2.json"
-      "test_database2.json" test_database_helper test_database_helper;
+    update_file_test
+      "tests write_to_file, delete_database, clear_database, \
+       add_database, and add_element_to_database in  \
+       empty_database.json"
+      "empty_database.json"
+      "{\"test\":[{}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
+    database_string_test "database_string for empty_database.json"
+      "empty_database.json"
+      "{\"test\":[{}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
     splice_outer_parens_test
-      "splice_outer_parens for test_database.json"
-      (database_string "test_database.json")
-      "\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"is \
-       writing code right \
-       now.\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}],";
+      "splice_outer_parens_test for empty_database.json"
+      "empty_database.json"
+      "\"test\":[{}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}],";
+    find_database_test "find_database for empty_database.json"
+      "empty_database.json" "Cornell"
+      "{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}";
+    find_database_test "find_database for empty_database.json"
+      "empty_database.json" "Users" "{\"Tomas\":\"\",\"Max\":\"\"}";
+    find_value_in_database_test
+      "find_value_in_database for empty_database.json"
+      "empty_database.json" "Users" "Tomas"
+      "\n  - No results found. Database is empty.";
+    get_db_names_list_test "get_db_names for empty_database.json"
+      "empty_database.json" "  -  test\n  -  Cornell\n  -  Users\n\n";
+    list_rows_test "list_rows for empty_database.json"
+      "empty_database.json" "Cornell" "\n - Database is empty.\n\n";
+  ]
+
+let second_section_tests =
+  let _ =
+    update_all "test_database2.json" "Users" "fact" "CS 3110 is fun."
+  in
+  let _ = update_element "test_database2.json" "test" "2" 1 "zero, 0" in
+  let _ =
+    add_element_to_all_database "test_database2.json" "Users" "Idea"
+  in
+  [
+    update_file_test
+      "tests update_all, update_element, and \
+       add_element_to_all_database in test_database2.json"
+      "test_database2.json"
+      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
+       3110 is \
+       fun.\",\"Idea\":\"\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS \
+       3110 is \
+       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"zero, \
+       0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}]}";
+    database_string_test "database_string for test_database2.json"
+      "test_database2.json"
+      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
+       3110 is \
+       fun.\",\"Idea\":\"\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS \
+       3110 is \
+       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"zero, \
+       0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}]}";
+    splice_outer_parens_test
+      "splice_outer_parens_test for test_database2.json"
+      "test_database2.json"
+      "\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
+       3110 is \
+       fun.\",\"Idea\":\"\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS \
+       3110 is \
+       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"zero, \
+       0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}],";
+    find_database_test "find_database for test_database2.json"
+      "test_database2.json" "Users"
+      "{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"}, \
+       {\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS 3110 is \
+       fun.\",\"Idea\":\"\"}, \
+       {\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS 3110 is \
+       fun.\",\"Idea\":\"\"}";
+    find_database_test "find_database for test_database2.json"
+      "test_database2.json" "test"
+      "{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}, \
+       {\"1\":\"a\",\"2\":\"zero, \
+       0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}";
+    find_value_in_database_test
+      "find_value_in_database for test_database2.json"
+      "test_database2.json" "Users" "name" "\n\"Max\", \"Cthulu\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database2.json"
+      "test_database2.json" "test" "5" "\n\"e\"";
+    get_db_names_list_test "get_db_names for test_database2.json"
+      "test_database2.json" "  -  Users\n  -  test\n\n";
+    list_rows_test "list_rows for test_database2.json"
+      "test_database2.json" "Users"
+      "(name: Max),  (age: 20),  (fact: CS 3110 is fun.),  (Idea: )\n\
+       (name: Cthulu),  (age: infinite),  (fact: CS 3110 is fun.),  \
+       (Idea: )\n\n";
+    list_rows_test "list_rows for test_database2.json"
+      "test_database2.json" "test"
+      "(1: a),  (2: zero, 0),  (3: c),  (4: d),  (5: e)\n\n";
+  ]
+
+let exception_tests =
+  [
     ( "delete_database for test_database.json where name does not \
        match a database"
     >:: fun _ ->
       assert_raises (DatabaseNotFound "Hello") (fun () ->
           delete_database "test_database.json" "Hello") );
-    add_database_test "add_database for empty_database.json"
-      "empty_database.json" "TEST" [ "hi"; "bye" ]
-      "{\"TEST\":[{\"hi\":\"\",\"bye\":\"\"}]}";
-    delete_database_test
-      "delete_database for empty_database.json where name does match a \
-       database, causing empty file"
-      "test_database3.json" "Users" "{}";
-    delete_database_test
-      "delete_database for test_helper_database.json where name does \
-       match a database, causing non-empty file (top database)"
-      "test_helper_database.json" "Users"
-      "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\"}]}";
-    clear_database_file_test
-      "clear_database_file_test for empty_database.json"
-      "empty_database.json" "{}";
-    clear_database_test
-      "clear_database for test_database2.json where name does not \
-       match a database"
-      "test_database2.json" "CS3110"
-      (Yojson.Basic.to_string test_database_helper);
-    add_database_test "add testDB4 to empty_database.json"
-      "empty_database.json" "testDB4" [ "1"; "2"; "3" ]
-      "{\"testDB4\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\"}]}";
-    clear_database_test
-      "clear_database for empty_database.json where name does match a \
-       database"
-      "empty_database.json" "testDB4" "{\"testDB4\":[{}]}";
-    find_database_test
-      "find_database for test_database.json when the database does \
-       exist in file"
-      "test_database.json" "test"
-      "{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}, \
-       {\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}";
     ( "find_database for empty_database.json when the database does \
        not exist in the file"
     >:: fun _ ->
       assert_raises (DatabaseNotFound "testDB78") (fun () ->
           find_database "empty_database.json" "testDB78") );
-    find_value_in_database_test
-      "find_value_in_database for test_database.json when value does \
-       exist in database (bottom database)"
-      "test_database.json" "test" "4" "\n\"d\"";
-    find_value_in_database_test
-      "find_value_in_database for test_database.json when value does \
-       exist in database (top database)"
-      "test_database.json" "Users" "name" "\n\"Max\"";
     ( "find_value_in_database for test_database.json when the value \
        does not exist in the database"
     >:: fun _ ->
@@ -310,22 +251,25 @@ let main_tests =
     >:: fun _ ->
       assert_raises (DatabaseNotFound "testDB0") (fun () ->
           find_value_in_database "test_database.json" "testDB0" "20") );
-  ]
-
-let update_tests =
-  [
-    get_db_names_list_test "get_db_names_list for test_database.json"
-      "test_database.json" "  -  Users\n  -  test\n\n";
-    list_rows_test "list_rows for Users in test_database.json"
-      "test_database.json" "Users"
-      "(name: Max),  (age: 20),  (fact: is writing code right now.)\n\n";
-    list_rows_test "list_rows for test in test_database.json"
-      "test_database.json" "test"
-      "(1: a),  (2: b),  (3: c),  (4: d),  (5: e)\n\n";
+    ( "update_element for test_database.json where element_row = 0"
+    >:: fun _ ->
+      assert_raises (InvalidRow "Row cannot be less than 1") (fun () ->
+          update_element "test_database.json" "test" "4" 0 "cs 3110") );
+    ( "update_element for test_database.json where element_row < 0"
+    >:: fun _ ->
+      assert_raises (InvalidRow "Row cannot be less than 1") (fun () ->
+          update_element "test_database.json" "Users" "age" ~-1
+            "cs 3110") );
+    ( "update_element for test_database.json where element_row too large"
+    >:: fun _ ->
+      assert_raises (InvalidRow "Row not in database") (fun () ->
+          update_element "test_database.json" "Users" "name" 5 "cs 3110")
+    );
   ]
 
 let suite =
   "test suite for final project"
-  >::: List.flatten [ main_tests; update_tests ]
+  >::: List.flatten
+         [ first_section_tests; second_section_tests; exception_tests ]
 
 let _ = run_test_tt_main suite

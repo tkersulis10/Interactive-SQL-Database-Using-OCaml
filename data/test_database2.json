@@ -9,6 +9,11 @@
       "name": "Max",
       "age": "20",
       "fact": "is writing code right now."
+    },
+    {
+      "name": "Cthulu",
+      "age": "infinite",
+      "fact": "is the bringer of chaos."
     }
   ],
   "test": [
