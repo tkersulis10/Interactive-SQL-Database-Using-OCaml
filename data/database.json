@@ -22,28 +22,44 @@
       "2": "",
       "3": "",
       "4": "",
-      "5": ""
+      "5": "",
+      "tvalue": "",
+      "opval": "",
+      "cliTest": "",
+      "test2": ""
     },
     {
       "1": "a",
       "2": "b",
       "3": "c",
       "4": "d",
-      "5": "e"
+      "5": "e",
+      "tvalue": "",
+      "opval": "yay",
+      "cliTest": "success",
+      "test2": "maybe"
     },
     {
       "1": "1",
       "2": "2",
       "3": "3",
       "4": "4",
-      "5": "5"
+      "5": "5",
+      "tvalue": "",
+      "opval": "yay",
+      "cliTest": "success",
+      "test2": "maybe"
     },
     {
       "1": "11",
       "2": "22",
       "3": "33",
       "4": "44",
-      "5": "55"
+      "5": "55",
+      "tvalue": "",
+      "opval": "yay",
+      "cliTest": "success",
+      "test2": "maybe"
     }
   ]
 }

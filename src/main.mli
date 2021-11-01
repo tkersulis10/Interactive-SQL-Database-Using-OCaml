@@ -96,7 +96,8 @@ val add_element_to_database : string -> string -> string -> unit
     element [value_name] to the template of database [database_name] in
     [file]. *)
 
-val add_element_to_all_database : string -> string -> string -> unit
+val add_element_to_all_database :
+  string -> ?val_name:string -> string -> string -> unit
 (** [add_element_to_all_database file database_name value_name] adds the
     element [value_name] to all rows of the database [database_name] in
     [file]. *)

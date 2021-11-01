@@ -298,25 +298,33 @@ let add_element_to_database
     of strings [table_list]. *)
 let rec string_value_adder
     (table_list : string list)
-    (value_name : string) =
+    (field_name : string)
+    (value_name : string)
+    (first_pass : bool) =
   match table_list with
   | [] -> ""
   | h :: t ->
       if h = "]" then "]"
+      else if first_pass then
+        h ^ ",\"" ^ field_name ^ "\":" ^ "\"" ^ "\"" ^ "}"
+        ^ string_value_adder t field_name value_name false
       else
-        h ^ ",\"" ^ value_name ^ "\":\"\"}"
-        ^ string_value_adder t value_name
+        h ^ ",\"" ^ field_name ^ "\":" ^ "\"" ^ value_name ^ "\"" ^ "}"
+        ^ string_value_adder t field_name value_name false
 
 let add_element_to_all_database
     (file : string)
+    ?val_name:(value_name = "")
     (database_name : string)
-    (value_name : string) =
+    (field_name : string) =
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let database_string =
     find_database file database_name |> Yojson.Basic.to_string
   in
   let table_list = String.split_on_char '}' database_string in
-  let new_database = string_value_adder table_list value_name in
+  let new_database =
+    string_value_adder table_list field_name value_name true
+  in
   let new_str =
     let after_helper =
       add_element_helper database_list database_name new_database

@@ -7,6 +7,7 @@ type command =
   | List
   | ListRows of string
   | Get of (string * string)
+  | Addfield of (string * string * string)
   | Help
   | Quit
 
@@ -66,7 +67,7 @@ let print_help_msg () =
 
   (*get help*)
   ANSITerminal.print_string [ ANSITerminal.green ]
-    "  Get values by field name:\n\n";
+    "  Get list of values by field name:\n\n";
   print_string "    Syntax: ";
   ANSITerminal.print_string [ ANSITerminal.yellow ] "get ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "field_name ";
@@ -105,6 +106,9 @@ let rec parse_args (args : string list) acc : string list =
       else parse_args t acc
   | [] -> if List.length acc > 0 then acc else raise NoArgs
 
+(** [get_create_args args] extracts a tuple of (name, field_name_args)
+    given a create table command from args list [args]. Raises: NoArgs
+    if no args are available. *)
 let rec get_create_args args =
   match args with
   | h :: t ->
@@ -112,6 +116,10 @@ let rec get_create_args args =
       else get_create_args t
   | [] -> raise NoArgs
 
+(** [get_get_args val_name args] extracts a tuple of (value_name,
+    database_name) given a get _ in _ command from args list [args] and
+    given value_name [val_name]. Raises: NoArgs if no args are available
+    or Malformed if incorrectly formatted. *)
 let rec get_get_args val_name args =
   match args with
   | h :: t ->
@@ -124,9 +132,41 @@ let rec get_get_args val_name args =
       else raise Malformed
   | [] -> raise NoArgs
 
+(** [get_addfield_args args] extracts a tuple of (field_name,
+    database_name, value_name) given an add field _ to _ as _ command
+    from args list [args] . Raises: NoArgs if no args are available or
+    Malformed if incorrectly formatted. *)
+let get_addfield_args args =
+  match args with
+  | h :: t -> (
+      let field_name = h in
+      match t with
+      | h :: t ->
+          if h = "to" then
+            match t with
+            | h :: t -> (
+                let db = h in
+                match t with
+                | h :: t ->
+                    if h = "as" then
+                      match t with
+                      | h :: t ->
+                          let value_name = h in
+                          (field_name, db, value_name)
+                      | [] -> raise NoArgs
+                    else raise Malformed
+                | [] ->
+                    let value_name = "" in
+                    (field_name, db, value_name))
+            | [] -> raise NoArgs
+          else raise Malformed
+      | [] -> raise NoArgs)
+  | [] -> raise NoArgs
+
 let cmd_do (cmd : string) (args : string list) =
   match cmd with
   | "create" -> Create (get_create_args args)
+  | "addfield" -> Addfield (get_addfield_args args)
   | "delete" -> begin
       match args with
       | h :: t ->
@@ -143,6 +183,13 @@ let cmd_do (cmd : string) (args : string list) =
 let cmd_read cmd lst =
   match cmd with
   | "help" -> Help
+  | "add" -> begin
+      match lst with
+      | h :: t ->
+          if String.lowercase_ascii h = "field" then cmd_do "addfield" t
+          else raise Malformed
+      | [] -> raise Malformed
+    end
   | "list" -> begin
       match lst with
       | h :: t ->
@@ -202,6 +249,17 @@ let main () =
         print_string "\nDatabase table ";
         ANSITerminal.print_string [ ANSITerminal.green ] name;
         print_string " created successfully.\n\n"
+    | Addfield (field_name, database_name, value_name) -> begin
+        match
+          add_element_to_all_database "database.json"
+            ~val_name:value_name database_name field_name
+        with
+        | exception DatabaseNotFound n ->
+            print_string "\nError: database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] n;
+            print_string " not found.\n\n"
+        | _ -> print_string "Table successfully updated.\n\n"
+      end
     | Get (val_name, db_name) -> begin
         match
           find_value_in_database "/database.json" db_name val_name
