@@ -2,8 +2,10 @@ type db_list
 (** Json list representation of a set of databases. *)
 
 exception ValNotFound of string
-(** Raised when a value is searched for and not found in a file or
-    database. *)
+(** Raised when a value is searched for and not found in a database. *)
+
+exception FieldNotFound of string
+(** Raised when a field is searched for and not found in a database. *)
 
 exception DatabaseNotFound of string
 (** Raised when a database is searched for and not found in a file or
@@ -11,6 +13,10 @@ exception DatabaseNotFound of string
 
 exception InvalidRow of string
 (** Raised when an invalid row is searched for in a database. *)
+
+exception InvalidShape
+(** Raised when a row of incorrect shape (incorrect # of fields/values)
+    attempts to be added to a database table. *)
 
 val file_location : string
 (** Default file path of main DBMS*)
@@ -96,23 +102,42 @@ val add_element_to_database : string -> string -> string -> unit
     element [value_name] to the template of database [database_name] in
     [file]. *)
 
-val add_element_to_all_database :
+val add_field_to_all_rows :
   string -> ?val_name:string -> string -> string -> unit
 (** [add_element_to_all_database file database_name value_name] adds the
     element [value_name] to all rows of the database [database_name] in
     [file]. *)
 
-val update_element : string -> string -> string -> int -> string -> unit
-(** [update_element file database_name value_name element_row new_value]
-    updates the element in [file] in [database_name] with element name
-    [value_name] in the [element_row]th row of the database to new value
+val find_row : string -> string -> string -> string -> int list
+(** [find_row file database_name field_name value_name] returns the row
+    numbers of which field_name corresponds to value_name in an array
+    sorted from lowest row number first to highest last. *)
+
+val update_value : string -> string -> string -> int -> string -> unit
+(** [update_value file database_name field_name element_row new_value]
+    updates the value in [file] in [database_name] with field name
+    [field_name] in the [element_row]th row of the database to new value
     [new_value]. The first row after the template row in the database
-    corresponds to [element_row] = 1. If [value_name] is not
-    [database_name] then nothing changes. Requires: [element_row] >= 1
-    and is a valid row in the [database_name]. *)
+    corresponds to [element_row] = 1. If [field_name] is not in
+    [database_name] then raises FieldNotFound. Requires: [element_row]
+    >= 1 and is a valid row in the [database_name]. *)
 
 val update_all : string -> string -> string -> string -> unit
-(** [update_element file database_name value_name new_value] updates all
-    the elements in [file] in [database_name] with element name
-    [value_name] to new value [new_value]. If [value_name] is not
-    [database_name] then nothing changes. *)
+(** [update_element file database_name field_name new_value] updates all
+    the elements in [file] in [database_name] with field name
+    [field_name] to new value [new_value]. If [field_name] is not in
+    [database_name] then raises FieldNotFound. *)
+
+val delete_rows_in_database : string -> int list -> string -> unit
+(** [delete_rows_in_database file database_name comp_field comp_val]
+    deletes all the rows in [file] in [database_name] with field name
+    [comp_val] set to value [comp_value]. If [field_name] is not in
+    [database_name] then raises FieldNotFound. *)
+
+val add_row : string -> string -> string list -> unit
+(** [add_row file db_name field_val_pairs] adds a new row of the
+    corresponding field value pairs to the database with name [db_name] *)
+
+val get_fields_list : string -> string -> string list
+(** [get_fields_list file db_name] lists the string titles of each field
+    in the shape of database [db_name] inside [file] *)

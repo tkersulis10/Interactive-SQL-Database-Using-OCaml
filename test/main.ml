@@ -89,18 +89,18 @@ let list_rows_test
     (list_rows file database_name)
     ~printer:identity
 
-(** [add_element_to_all_database_test name file database_name value_name expected_output]
+(** [add_field_to_all_rows_test name file database_name value_name expected_output]
     creates an OUnit test with name [name] that compares whether
     [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
     [expected_output] after calling
-    [add_element_to_all_database file database_name value_name]. *)
-let add_element_to_all_database_test
+    [add_field_to_all_rows file database_name value_name]. *)
+let add_field_to_all_rows_test
     (name : string)
     (file : string)
     (database_name : string)
     (value_name : string)
     (expected_output : string) =
-  let _ = add_element_to_all_database file database_name value_name in
+  let _ = add_field_to_all_rows file database_name value_name in
   name >:: fun _ ->
   assert_equal expected_output
     (file |> dbs_from_file |> Yojson.Basic.to_string)
@@ -166,14 +166,12 @@ let second_section_tests =
   let _ =
     update_all "test_database2.json" "Users" "fact" "CS 3110 is fun."
   in
-  let _ = update_element "test_database2.json" "test" "2" 1 "zero, 0" in
-  let _ =
-    add_element_to_all_database "test_database2.json" "Users" "Idea"
-  in
+  let _ = update_value "test_database2.json" "test" "2" 1 "zero, 0" in
+  let _ = add_field_to_all_rows "test_database2.json" "Users" "Idea" in
   [
     update_file_test
-      "tests update_all, update_element, and \
-       add_element_to_all_database in test_database2.json"
+      "tests update_all, update_element, and add_field_to_all_rows in \
+       test_database2.json"
       "test_database2.json"
       "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
        3110 is \
@@ -254,16 +252,16 @@ let exception_tests =
     ( "update_element for test_database.json where element_row = 0"
     >:: fun _ ->
       assert_raises (InvalidRow "Row cannot be less than 1") (fun () ->
-          update_element "test_database.json" "test" "4" 0 "cs 3110") );
+          update_value "test_database.json" "test" "4" 0 "cs 3110") );
     ( "update_element for test_database.json where element_row < 0"
     >:: fun _ ->
       assert_raises (InvalidRow "Row cannot be less than 1") (fun () ->
-          update_element "test_database.json" "Users" "age" ~-1
-            "cs 3110") );
+          update_value "test_database.json" "Users" "age" ~-1 "cs 3110")
+    );
     ( "update_element for test_database.json where element_row too large"
     >:: fun _ ->
       assert_raises (InvalidRow "Row not in database") (fun () ->
-          update_element "test_database.json" "Users" "name" 5 "cs 3110")
+          update_value "test_database.json" "Users" "name" 5 "cs 3110")
     );
   ]
 
