@@ -139,14 +139,14 @@ let first_section_tests =
        add_database, and add_element_to_database in  \
        empty_database.json"
       "empty_database.json"
-      "{\"test\":[{}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
+      "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
     database_string_test "database_string for empty_database.json"
       "empty_database.json"
-      "{\"test\":[{}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
+      "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
     splice_outer_parens_test
       "splice_outer_parens_test for empty_database.json"
       "empty_database.json"
-      "\"test\":[{}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}],";
+      "\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}],";
     find_database_test "find_database for empty_database.json"
       "empty_database.json" "Cornell"
       "{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}";
