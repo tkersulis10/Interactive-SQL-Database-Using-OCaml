@@ -469,8 +469,11 @@ let find_row
         match db_list with
         | h :: t ->
             if
-              Yojson.Basic.Util.to_string (List.assoc field_name h)
-              = value_name
+              try
+                Yojson.Basic.Util.to_string (List.assoc field_name h)
+                = value_name
+              with
+              | Not_found -> raise (FieldNotFound field_name)
             then find_val_row t (acc + 1) (acc_list @ [ acc ])
             else find_val_row t (acc + 1) acc_list
         | [] ->

@@ -147,7 +147,7 @@ val add_row : string -> string -> string list -> unit
 
 val get_fields_list : string -> string -> string list
 (** [get_fields_list file db_name] lists the string titles of each field
-    in the shape of database [db_name] inside [file] *)
+    in the shape of database [db_name] inside [file]. *)
 
 val sort_field_string :
   string -> string -> string -> (string -> string -> int) -> unit

@@ -106,6 +106,42 @@ let add_field_to_all_rows_test
     (file |> dbs_from_file |> Yojson.Basic.to_string)
     ~printer:identity
 
+(** [string_of_int_list lst] converts the int list [lst] to a string
+    representation. *)
+let rec string_of_int_list (lst : int list) : string =
+  match lst with
+  | [] -> ""
+  | h :: t -> string_of_int h ^ ", " ^ string_of_int_list t
+
+(** [find_row_test name file database_name field_name value_name expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [find_row file database_name field_name value_name] is equal to
+    [expected_output]. *)
+let find_row_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (field_name : string)
+    (value_name : string)
+    (expected_output : int list) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (find_row file database_name field_name value_name)
+    ~printer:string_of_int_list
+
+(** [get_fields_list_test name file database_name expected_output]
+    creates an OUnit test with name [name] that compares whether
+    [get_fields_list file database_name] is equal to [expected_output]. *)
+let get_fields_list_test
+    (name : string)
+    (file : string)
+    (database_name : string)
+    (expected_output : string list) =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (get_fields_list file database_name)
+    ~printer:(String.concat ", ")
+
 (** [update_file_test name file expected_output] creaes an OUnit test
     with name [name] that compares whether
     [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
@@ -160,6 +196,12 @@ let first_section_tests =
       "empty_database.json" "  -  test\n  -  Cornell\n  -  Users\n\n";
     list_rows_test "list_rows for empty_database.json"
       "empty_database.json" "Cornell" "\n - Database is empty.\n\n";
+    get_fields_list_test "get_fields_list for empty_database.json"
+      "empty_database.json" "test"
+      [ "1"; "2"; "3"; "4"; "5" ];
+    get_fields_list_test "get_fields_list for empty_database.json"
+      "empty_database.json" "Cornell"
+      [ "Engineering"; "CALS"; "A&S"; "Hotel" ];
   ]
 
 let second_section_tests =
@@ -224,6 +266,21 @@ let second_section_tests =
     list_rows_test "list_rows for test_database2.json"
       "test_database2.json" "test"
       "(1: a),  (2: zero, 0),  (3: c),  (4: d),  (5: e)\n\n";
+    find_row_test
+      "find_row for test_database2.json where there are multiple \
+       occurences of a value"
+      "test_database2.json" "Users" "Idea" "" [ 1; 2 ];
+    find_row_test
+      "find_row for test_database2.json where there is one occurrence \
+       of a value"
+      "test_database2.json" "test" "2" "zero, 0" [ 1 ];
+    find_row_test
+      "find_row for test_database2.json where there is one occurrence \
+       of a value"
+      "test_database2.json" "Users" "age" "infinite" [ 2 ];
+    get_fields_list_test "get_fields_list for test_database2.json"
+      "test_database2.json" "Users"
+      [ "name"; "age"; "fact"; "Idea" ];
   ]
 
 let exception_tests =
@@ -263,6 +320,22 @@ let exception_tests =
       assert_raises (InvalidRow "Row not in database") (fun () ->
           update_value "test_database.json" "Users" "name" 5 "cs 3110")
     );
+    ( "find_row for empty_database.json where the value name is not in \
+       the database"
+    >:: fun _ ->
+      assert_raises (ValNotFound "Clarkson") (fun () ->
+          find_row "empty_database.json" "Cornell" "Engineering"
+            "Clarkson") );
+    ( "find_row for test_database2.json where the field name is not in \
+       the database"
+    >:: fun _ ->
+      assert_raises (FieldNotFound "hello") (fun () ->
+          find_row "test_database2.json" "Users" "hello" "20") );
+    ( "get_fields_list for empty_database.json where the database is \
+       not in the file"
+    >:: fun _ ->
+      assert_raises (DatabaseNotFound "Test") (fun () ->
+          get_fields_list "empty_database.json" "Test") );
   ]
 
 let suite =
