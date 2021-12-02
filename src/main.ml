@@ -13,6 +13,10 @@ exception InvalidRow of string
 
 exception InvalidShape
 
+exception CannotConvertToInt
+
+exception CannotConvertElement
+
 let set_file_location (file : string) : string = "./data/" ^ file
 
 (** File location, accessible via this function in the event the
@@ -137,8 +141,6 @@ let rec find_database (file : string) (database_name : string) =
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   find_database_helper database_name database_list
 
-(** [get_fields_list file db_name] gets a string list of all field names
-    in the shape of database [db_name]. *)
 let get_fields_list (file : string) (db_name : string) =
   let database_row_list =
     find_database file db_name |> Yojson.Basic.Util.to_list
@@ -589,3 +591,80 @@ let add_row (file : string) (db_name : string) (values : string list) =
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
     write_to_file file (Yojson.Basic.from_string new_str)
+
+(** [sort_field_helper file db_name field_name] creates a string list
+    which is a list of the values with field name [field_name] in
+    database [db_name] in file [file]. *)
+let sort_field_helper
+    (file : string)
+    (db_name : string)
+    (field_name : string) =
+  let string_of_values_unformatted =
+    find_value_in_database file db_name field_name
+  in
+  let string_list_unformatted =
+    String.split_on_char ',' string_of_values_unformatted
+  in
+  List.map
+    (fun s -> String.sub s 2 (String.length s - 3))
+    string_list_unformatted
+
+(** [update_sorted_values file db_name field_name sorted_list sorted_list_ref]
+    updates all of the values with field name [field_name] in [db_name]
+    in [file] to match the order of [sorted_list]. *)
+let update_sorted_values
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (sorted_list : string list) =
+  let sorted_list_ref = ref sorted_list in
+  for i = 1 to List.length sorted_list do
+    update_value file db_name field_name i (List.hd !sorted_list_ref);
+    sorted_list_ref := List.tl !sorted_list_ref
+  done
+
+let sort_field_string
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (comparison_fun : string -> string -> int) =
+  let string_list = sort_field_helper file db_name field_name in
+  let sorted_list = List.sort comparison_fun string_list in
+  update_sorted_values file db_name field_name sorted_list
+
+let sort_field_int
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (comparison_fun : int -> int -> int) =
+  let string_list = sort_field_helper file db_name field_name in
+  let int_list =
+    try List.map (fun s -> int_of_string s) string_list with
+    | Failure _ -> raise CannotConvertToInt
+  in
+  let sorted_list =
+    List.sort comparison_fun int_list
+    |> List.map (fun i -> string_of_int i)
+  in
+  update_sorted_values file db_name field_name sorted_list
+
+let sort_field_general
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (element_of_string : string -> 'a)
+    (string_of_element : 'a -> string)
+    (comparison_fun : 'a -> 'a -> int) =
+  let string_list = sort_field_helper file db_name field_name in
+  let element_list =
+    try List.map (fun s -> element_of_string s) string_list with
+    | Failure _ -> raise CannotConvertElement
+  in
+  let sorted_list =
+    try
+      List.sort comparison_fun element_list
+      |> List.map (fun x -> string_of_element x)
+    with
+    | Failure _ -> raise CannotConvertElement
+  in
+  update_sorted_values file db_name field_name sorted_list

@@ -14,6 +14,13 @@ exception DatabaseNotFound of string
 exception InvalidRow of string
 (** Raised when an invalid row is searched for in a database. *)
 
+exception CannotConvertToInt
+(** Raised when trying to convert a string to int unsuccessfully. *)
+
+exception CannotConvertElement
+(** Raised when trying to convert a string to some element is
+    unsuccessful. *)
+
 exception InvalidShape
 (** Raised when a row of incorrect shape (incorrect # of fields/values)
     attempts to be added to a database table. *)
@@ -110,8 +117,8 @@ val add_field_to_all_rows :
 
 val find_row : string -> string -> string -> string -> int list
 (** [find_row file database_name field_name value_name] returns the row
-    numbers of which field_name corresponds to value_name in an array
-    sorted from lowest row number first to highest last. *)
+    numbers of which [field_name] corresponds to [value_name] in an
+    array sorted from lowest row number first to highest last. *)
 
 val update_value : string -> string -> string -> int -> string -> unit
 (** [update_value file database_name field_name element_row new_value]
@@ -141,3 +148,33 @@ val add_row : string -> string -> string list -> unit
 val get_fields_list : string -> string -> string list
 (** [get_fields_list file db_name] lists the string titles of each field
     in the shape of database [db_name] inside [file] *)
+
+val sort_field_string :
+  string -> string -> string -> (string -> string -> int) -> unit
+(** [sort_field_string file db_name field_name comparison_fun] sorts the
+    values with field name [field_name] in [db_name] of [file] according
+    to comparison function [comparison_fun]. *)
+
+val sort_field_int :
+  string -> string -> string -> (int -> int -> int) -> unit
+(** [sort_field_int file db_name field_name comparison_fun] sorts the
+    values with field name [field_name] in [db_name] of [file] according
+    to comparison function [comparison_fun]. Raises:
+    [CannotConvertToInt] if a value of [field_name] cannot be converted
+    to an int. *)
+
+val sort_field_general :
+  string ->
+  string ->
+  string ->
+  (string -> 'a) ->
+  ('a -> string) ->
+  ('a -> 'a -> int) ->
+  unit
+(** [sort_field_general file db_name field_name element_of_string string_of_element comparison_fun]
+    sorts the values with field name [field_name] in [db_name] of [file]
+    according to comparison function [comparison_fun] with conversion
+    functions [element_of_string] and [string_of_element] to convert
+    between the type of the element and a string. Raises:
+    [CannotConvertElement] if a value of [field_name] cannot be
+    converted to the type of the element. *)
