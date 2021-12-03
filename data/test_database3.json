@@ -9,6 +9,53 @@
       "name": "Max",
       "age": "20",
       "fact": "is writing code right now."
+    },
+    {
+      "name": "Cthulu",
+      "age": "infinite",
+      "fact": "is the bringer of chaos."
+    },
+    {
+      "name": "cli",
+      "age": "1",
+      "fact": "is computer"
+    }
+  ],
+  "test": [
+    {
+      "1": "",
+      "2": "",
+      "3": "",
+      "tvalue": "",
+      "opval": ""
+    },
+    {
+      "1": "lol",
+      "2": "b",
+      "3": "5",
+      "tvalue": "",
+      "opval": "nay"
+    },
+    {
+      "1": "lol",
+      "2": "b",
+      "3": "3",
+      "tvalue": "",
+      "opval": "nay"
+    },
+    {
+      "1": "lol",
+      "2": "b",
+      "3": "33",
+      "tvalue": "",
+      "opval": "nay"
+    },
+    {
+      "1": "11",
+      "2": "a",
+      "3": "-43",
+      "tvalue": "",
+      "opval": "yay"
     }
   ]
 }
