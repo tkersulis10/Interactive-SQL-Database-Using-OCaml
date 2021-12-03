@@ -142,7 +142,7 @@ let get_fields_list_test
     (get_fields_list file database_name)
     ~printer:(String.concat ", ")
 
-(** [update_file_test name file expected_output] creaes an OUnit test
+(** [update_file_test name file expected_output] creates an OUnit test
     with name [name] that compares whether
     [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
     [expected_output] after a series of manipulations to [file]. *)
@@ -283,6 +283,114 @@ let second_section_tests =
       [ "name"; "age"; "fact"; "Idea" ];
   ]
 
+let third_section_tests =
+  let _ =
+    sort_field_string "test_database3.json" "Users" "fact" compare
+  in
+  let _ = sort_field_int "test_database3.json" "test" "3" compare in
+  let _ =
+    sort_field_general "test_database3.json" "Users" "age" identity
+      identity compare
+  in
+  let _ =
+    sort_field_general "test_database3.json" "test" "2" int_of_string
+      string_of_int compare
+  in
+  [
+    update_file_test
+      "tests sort_field_string, sort_field_int, and sort_field_general \
+       in test_database3.json"
+      "test_database3.json"
+      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\"},{\"name\":\"Max\",\"age\":\"1\",\"fact\":\"is \
+       computer\"},{\"name\":\"Cthulu\",\"age\":\"20\",\"fact\":\"is \
+       the bringer of \
+       chaos.\"},{\"name\":\"cli\",\"age\":\"infinite\",\"fact\":\"is \
+       writing code right \
+       now.\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"tvalue\":\"\",\"opval\":\"\"},{\"1\":\"l \
+       o \
+       l\",\"2\":\"-1239999\",\"3\":\"-43\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"l \
+       o \
+       l\",\"2\":\"-23423\",\"3\":\"3\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"l \
+       o \
+       l\",\"2\":\"0\",\"3\":\"5\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"1 \
+       1\",\"2\":\"73\",\"3\":\"33\",\"tvalue\":\"\",\"opval\":\"yay\"}]}";
+    find_database_test "find_database for test_database3.json"
+      "test_database3.json" "Users"
+      "{\"name\":\"\",\"age\":\"\",\"fact\":\"\"}, \
+       {\"name\":\"Max\",\"age\":\"1\",\"fact\":\"is computer\"}, \
+       {\"name\":\"Cthulu\",\"age\":\"20\",\"fact\":\"is the bringer \
+       of chaos.\"}, \
+       {\"name\":\"cli\",\"age\":\"infinite\",\"fact\":\"is writing \
+       code right now.\"}";
+    find_database_test "find_database for test_database3.json"
+      "test_database3.json" "test"
+      "{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"tvalue\":\"\",\"opval\":\"\"}, \
+       {\"1\":\"l o \
+       l\",\"2\":\"-1239999\",\"3\":\"-43\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
+       {\"1\":\"l o \
+       l\",\"2\":\"-23423\",\"3\":\"3\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
+       {\"1\":\"l o \
+       l\",\"2\":\"0\",\"3\":\"5\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
+       {\"1\":\"1 \
+       1\",\"2\":\"73\",\"3\":\"33\",\"tvalue\":\"\",\"opval\":\"yay\"}";
+    find_value_in_database_test
+      "find_value_in_database for test_database3.json"
+      "test_database3.json" "Users" "name"
+      "\n\"Max\", \"Cthulu\", \"cli\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database3.json"
+      "test_database3.json" "Users" "age"
+      "\n\"1\", \"20\", \"infinite\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database3.json"
+      "test_database3.json" "Users" "fact"
+      "\n\
+       \"is computer\", \"is the bringer of chaos.\", \"is writing \
+       code right now.\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database3.json"
+      "test_database3.json" "test" "2"
+      "\n\"-1239999\", \"-23423\", \"0\", \"73\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database3.json"
+      "test_database3.json" "test" "3" "\n\"-43\", \"3\", \"5\", \"33\"";
+    get_db_names_list_test "get_db_names for test_database3.json"
+      "test_database3.json" "  -  Users\n  -  test\n\n";
+    list_rows_test "list_rows for Users in test_database3.json"
+      "test_database3.json" "Users"
+      "(name: Max),  (age: 1),  (fact: is computer)\n\
+       (name: Cthulu),  (age: 20),  (fact: is the bringer of chaos.)\n\
+       (name: cli),  (age: infinite),  (fact: is writing code right \
+       now.)\n\n";
+    list_rows_test "list_rows for test in test_database3.json"
+      "test_database3.json" "test"
+      "(1: l o l),  (2: -1239999),  (3: -43),  (tvalue: ),  (opval: nay)\n\
+       (1: l o l),  (2: -23423),  (3: 3),  (tvalue: ),  (opval: nay)\n\
+       (1: l o l),  (2: 0),  (3: 5),  (tvalue: ),  (opval: nay)\n\
+       (1: 1 1),  (2: 73),  (3: 33),  (tvalue: ),  (opval: yay)\n\n";
+    find_row_test
+      "find_row for test_database3.json where there are multiple \
+       occurences of a value"
+      "test_database3.json" "test" "opval" "nay" [ 1; 2; 3 ];
+    find_row_test
+      "find_row for test_database3.json where there is one occurrence \
+       of a value"
+      "test_database3.json" "test" "opval" "yay" [ 4 ];
+    find_row_test
+      "find_row for test_database3.json where there is one occurrence \
+       of a value"
+      "test_database3.json" "Users" "fact" "is writing code right now."
+      [ 3 ];
+    get_fields_list_test
+      "get_fields_list for Users in test_database3.json"
+      "test_database3.json" "Users"
+      [ "name"; "age"; "fact" ];
+    get_fields_list_test
+      "get_fields_list for test in test_database3.json"
+      "test_database3.json" "test"
+      [ "1"; "2"; "3"; "tvalue"; "opval" ];
+  ]
+
 let exception_tests =
   [
     ( "delete_database for test_database.json where name does not \
@@ -336,11 +444,37 @@ let exception_tests =
     >:: fun _ ->
       assert_raises (DatabaseNotFound "Test") (fun () ->
           get_fields_list "empty_database.json" "Test") );
+    ( "sort_field_string for test_database3.json where database is not \
+       file"
+    >:: fun _ ->
+      assert_raises (DatabaseNotFound "users") (fun () ->
+          sort_field_string "test_database3.json" "users" "age" compare)
+    );
+    ( "sort_field_int for test_database3.json where field is not file"
+    >:: fun _ ->
+      assert_raises (ValNotFound "4") (fun () ->
+          sort_field_int "test_database3.json" "test" "4" compare) );
+    ( "sort_field_int for test_database3.json where string cannot be \
+       converted to int"
+    >:: fun _ ->
+      assert_raises CannotConvertToInt (fun () ->
+          sort_field_int "test_database3.json" "Users" "age" compare) );
+    ( "sort_field_general for test_database3.json where converting \
+       function does not do a good job of converting"
+    >:: fun _ ->
+      assert_raises CannotConvertElement (fun () ->
+          sort_field_general "test_database3.json" "test" "2"
+            bool_of_string string_of_bool compare) );
   ]
 
 let suite =
   "test suite for final project"
   >::: List.flatten
-         [ first_section_tests; second_section_tests; exception_tests ]
+         [
+           first_section_tests;
+           second_section_tests;
+           third_section_tests;
+           exception_tests;
+         ]
 
 let _ = run_test_tt_main suite

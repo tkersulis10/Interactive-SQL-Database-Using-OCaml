@@ -661,7 +661,7 @@ let sort_field_general
   let string_list = sort_field_helper file db_name field_name in
   let element_list =
     try List.map (fun s -> element_of_string s) string_list with
-    | Failure _ -> raise CannotConvertElement
+    | _ -> raise CannotConvertElement
   in
   let sorted_list =
     try
