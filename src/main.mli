@@ -124,13 +124,13 @@ val find_row : string -> string -> string -> string -> int list
     array sorted from lowest row number first to highest last. *)
 
 val update_value : string -> string -> string -> int -> string -> unit
-(** [update_value file database_name field_name element_row new_value]
-    updates the value in [file] in [database_name] with field name
-    [field_name] in the [element_row]th row of the database to new value
-    [new_value]. The first row after the template row in the database
-    corresponds to [element_row] = 1. If [field_name] is not in
-    [database_name] then raises FieldNotFound. Requires: [element_row]
-    >= 1 and is a valid row in the [database_name]. *)
+(** [update_value file db_name field_name element_row new_value] updates
+    the value in [file] in [db_name] with field name [field_name] in the
+    [element_row]th row of the database to new value [new_value]. The
+    first row after the template row in the database corresponds to
+    [element_row] = 1. If [field_name] is not in [db_name] then raises
+    FieldNotFound. Requires: [element_row] >= 1 and is a valid row in
+    the [database_name]. *)
 
 val update_all : string -> string -> string -> string -> unit
 (** [update_element file database_name field_name new_value] updates all

@@ -192,7 +192,7 @@ let find_value_in_database
     (file : string)
     (database_name : string)
     (value_name : string) =
-  let database_entry_list =
+  let db_entry_list =
     Yojson.Basic.Util.to_list (find_database file database_name)
     |> List.tl |> List.rev
   in
@@ -211,7 +211,7 @@ let find_value_in_database
         if String.length acc > 0 then "\n" ^ acc
         else "\n  - No results found. Database is empty."
   in
-  scan_database database_entry_list ""
+  scan_database db_entry_list ""
 
 let get_db_names_list (file : string) =
   let list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
@@ -227,43 +227,41 @@ let get_db_names_list (file : string) =
   in
   get_names_rec "" list
 
+(** [list_vals_rec vals acc] adds the field name and value name in
+    [value_list] to [acc] as a string representation. *)
+let rec list_vals_rec value_list acc =
+  match value_list with
+  | (name, value) :: t ->
+      if List.length t > 0 then
+        list_vals_rec t ",  (" ^ name ^ ": "
+        ^ Yojson.Basic.Util.to_string value
+        ^ ")" ^ acc
+      else
+        list_vals_rec t "(" ^ name ^ ": "
+        ^ Yojson.Basic.Util.to_string value
+        ^ ")" ^ acc
+  | [] -> acc
+
+(** [list_rows_rec rows acc] goes through the list of rows [rows] and
+    adds each string representation of the row to [acc] with a newline
+    separator. *)
+let rec list_rows_rec rows acc =
+  match rows with
+  | val_list :: t ->
+      list_rows_rec t
+        (list_vals_rec
+           (List.rev (Yojson.Basic.Util.to_assoc val_list))
+           "\n")
+      ^ acc
+  | [] ->
+      if String.length acc > 1 then acc
+      else "\n - Database is empty.\n\n"
+
 let list_rows (file : string) (database_name : string) =
   let database_row_list =
     find_database file database_name
     |> Yojson.Basic.Util.to_list |> List.tl |> List.rev
   in
-
-  (*recursively go through each following row of db, adding each string
-    representation of row to acc with newline separator*)
-  let rec list_rows_rec rows acc =
-    match rows with
-    | val_list :: t ->
-        (*add field name and value name to string*)
-        let rec list_vals_rec vals acc =
-          match vals with
-          | (name, value) :: t ->
-              if List.length t > 0 then
-                list_vals_rec t ",  (" ^ name ^ ": "
-                ^ Yojson.Basic.Util.to_string value
-                ^ ")" ^ acc
-              else
-                (*end of list case no comma*)
-                list_vals_rec t "(" ^ name ^ ": "
-                ^ Yojson.Basic.Util.to_string value
-                ^ ")" ^ acc
-          | [] -> acc
-        in
-
-        list_rows_rec t
-          (list_vals_rec
-             (List.rev (Yojson.Basic.Util.to_assoc val_list))
-             "\n")
-        ^ acc
-    | [] ->
-        if String.length acc > 1 then acc
-        else "\n - Database is empty.\n\n"
-  in
-
   list_rows_rec database_row_list "\n"
 
 (** [add_element_helper database_list database_name new_database]
@@ -285,6 +283,25 @@ let rec add_element_helper
         ^ Yojson.Basic.to_string values
         ^ add_element_helper t database_name new_database
 
+(** [write_new_db file db_name db_list table_list template] writes the
+    new database [db_name] in [file] after adding an element to the
+    database using [db_list], [table_list], and [template]. *)
+let write_new_db file db_name db_list table_list template =
+  if List.length table_list < 3 then
+    let str = template ^ "}]" in
+    let new_str =
+      let after_helper = add_element_helper db_list db_name str in
+      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+    in
+    write_to_file file (Yojson.Basic.from_string new_str)
+  else
+    let str = template ^ "}" ^ String.concat "}" (List.tl table_list) in
+    let new_str =
+      let after_helper = add_element_helper db_list db_name str in
+      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
+    in
+    write_to_file file (Yojson.Basic.from_string new_str)
+
 let add_element_to_database
     (file : string)
     (database_name : string)
@@ -295,24 +312,7 @@ let add_element_to_database
   in
   let table_list = String.split_on_char '}' database_string in
   let template = List.hd table_list ^ ",\"" ^ value_name ^ "\":\"\"" in
-  if List.length table_list < 3 then
-    let str = template ^ "}]" in
-    let new_str =
-      let after_helper =
-        add_element_helper database_list database_name str
-      in
-      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
-    in
-    write_to_file file (Yojson.Basic.from_string new_str)
-  else
-    let str = template ^ "}" ^ String.concat "}" (List.tl table_list) in
-    let new_str =
-      let after_helper =
-        add_element_helper database_list database_name str
-      in
-      "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
-    in
-    write_to_file file (Yojson.Basic.from_string new_str)
+  write_new_db file database_name database_list table_list template
 
 (** [string_value_adder table_list value_name] adds the element
     [value_name] to all the rows in the database represented by a list
@@ -398,57 +398,81 @@ let rec update_row_in_database
         ^ update_row_in_database t (element_row - 1) new_row
       else "}" ^ h ^ update_row_in_database t (element_row - 1) new_row
 
+(** [new_database field_name new_value element_row table_list] creates a
+    new string representation of a database with [new_value] in for
+    [field_name] in [element_row] from [table_list]. *)
+let new_database field_name new_value element_row table_list =
+  let wanted_row = update_row_finder table_list element_row in
+  let value_list =
+    String.sub wanted_row 1 (String.length wanted_row - 1) ^ "}"
+    |> Yojson.Basic.from_string |> Yojson.Basic.Util.to_assoc
+  in
+  let unclean_row =
+    update_element_helper value_list field_name new_value false
+  in
+  let new_unclean_row =
+    String.sub unclean_row 0 (String.length unclean_row - 1)
+  in
+  let new_row =
+    ",{"
+    ^ String.sub new_unclean_row 1 (String.length new_unclean_row - 1)
+  in
+  let new_db_before_format =
+    update_row_in_database table_list element_row new_row
+  in
+  String.sub new_db_before_format 1
+    (String.length new_db_before_format - 1)
+
 let update_value
     (file : string)
-    (database_name : string)
+    (db_name : string)
     (field_name : string)
     (element_row : int)
     (new_value : string) =
   if element_row < 1 then raise (InvalidRow "Row cannot be less than 1")
   else
-    let database_list =
-      Yojson.Basic.Util.to_assoc (dbs_from_file file)
+    let db_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+    let db_string =
+      find_database file db_name |> Yojson.Basic.to_string
     in
-    let database_string =
-      find_database file database_name |> Yojson.Basic.to_string
-    in
-    let table_list = String.split_on_char '}' database_string in
+    let table_list = String.split_on_char '}' db_string in
     if element_row > List.length table_list - 2 then
       raise (InvalidRow "Row not in database")
     else
-      let wanted_row = update_row_finder table_list element_row in
-      let clean_row =
-        String.sub wanted_row 1 (String.length wanted_row - 1) ^ "}"
-      in
-      let value_list =
-        clean_row |> Yojson.Basic.from_string
-        |> Yojson.Basic.Util.to_assoc
-      in
-      let new_unclean_row =
-        update_element_helper value_list field_name new_value false
-      in
-      let new_unclean_row2 =
-        String.sub new_unclean_row 0 (String.length new_unclean_row - 1)
-      in
-      let new_row =
-        ",{"
-        ^ String.sub new_unclean_row2 1
-            (String.length new_unclean_row2 - 1)
-      in
-      let new_database_before_format =
-        update_row_in_database table_list element_row new_row
-      in
-      let new_database =
-        String.sub new_database_before_format 1
-          (String.length new_database_before_format - 1)
+      let new_db =
+        new_database field_name new_value element_row table_list
       in
       let new_str =
-        let after_helper =
-          add_element_helper database_list database_name new_database
-        in
+        let after_helper = add_element_helper db_list db_name new_db in
         "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
       in
       write_to_file file (Yojson.Basic.from_string new_str)
+
+(** [find_row_no_exception file database_name field_name value_name]
+    computes [find row file database_name field_name value_name] when
+    there is no exception raised. *)
+let find_row_no_exception file database_name field_name value_name =
+  let database_list =
+    dbs_from_file file |> member database_name
+    |> Yojson.Basic.Util.to_list |> List.tl
+    |> List.map Yojson.Basic.Util.to_assoc
+  in
+  let rec find_val_row db_list acc acc_list =
+    match db_list with
+    | h :: t ->
+        if
+          try
+            Yojson.Basic.Util.to_string (List.assoc field_name h)
+            = value_name
+          with
+          | Not_found -> raise (FieldNotFound field_name)
+        then find_val_row t (acc + 1) (acc_list @ [ acc ])
+        else find_val_row t (acc + 1) acc_list
+    | [] ->
+        if List.length acc_list = 0 then raise (ValNotFound value_name)
+        else acc_list
+  in
+  find_val_row database_list 1 []
 
 let find_row
     (file : string)
@@ -461,29 +485,7 @@ let find_row
     |> List.map Yojson.Basic.Util.to_assoc
   with
   | exception _ -> raise (DatabaseNotFound database_name)
-  | _ ->
-      let database_list =
-        dbs_from_file file |> member database_name
-        |> Yojson.Basic.Util.to_list |> List.tl
-        |> List.map Yojson.Basic.Util.to_assoc
-      in
-      let rec find_val_row db_list acc acc_list =
-        match db_list with
-        | h :: t ->
-            if
-              try
-                Yojson.Basic.Util.to_string (List.assoc field_name h)
-                = value_name
-              with
-              | Not_found -> raise (FieldNotFound field_name)
-            then find_val_row t (acc + 1) (acc_list @ [ acc ])
-            else find_val_row t (acc + 1) acc_list
-        | [] ->
-            if List.length acc_list = 0 then
-              raise (ValNotFound value_name)
-            else acc_list
-      in
-      find_val_row database_list 1 []
+  | _ -> find_row_no_exception file database_name field_name value_name
 
 (** [first_n_rows table_list number_rows] returns the first
     [number_rows] in [table_list]. *)
