@@ -484,6 +484,13 @@ let computation_tests =
       "multiplication of of int values in computation_database.json"
       "computation_database.json" "Types" "int" int_of_string 1 ( * )
       (-1965600);
+    computation_of_any_field_test
+      "concatenation with extra effects of boundary string values in \
+       computation_database.json"
+      "computation_database.json" "Mismatch" "Weird Notation" identity
+      "START"
+      (fun acc s -> acc ^ "; " ^ s ^ "; ")
+      "START; \\\"; ; ''; ; yes; ; ; ";
   ]
 
 let exception_tests =

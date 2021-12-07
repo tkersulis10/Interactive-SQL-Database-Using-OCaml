@@ -604,13 +604,21 @@ let sort_field_helper
     (file : string)
     (db_name : string)
     (field_name : string) =
-  let string_of_values_unformatted =
-    find_value_in_database file db_name field_name
+  let rec list_creator entry_list value_name =
+    match entry_list with
+    | h :: t ->
+        let first_string =
+          find_value_helper (Yojson.Basic.Util.to_assoc h) value_name
+        in
+        let final_string =
+          String.sub first_string 1 (String.length first_string - 2)
+        in
+        final_string :: list_creator t value_name
+    | [] -> []
   in
-  let string_list_unformatted =
-    String.split_on_char '\"' string_of_values_unformatted
-  in
-  List.filteri (fun i s -> i mod 2 = 1) string_list_unformatted
+  list_creator
+    (Yojson.Basic.Util.to_list (find_database file db_name) |> List.tl)
+    field_name
 
 (** [update_sorted_values file db_name field_name sorted_list sorted_list_ref]
     updates all of the values with field name [field_name] in [db_name]
