@@ -1,0 +1,55 @@
+{
+  "Types": [
+    {
+      "bool": "",
+      "float": "",
+      "string": "",
+      "int": ""
+    },
+    {
+      "bool": "true",
+      "float": "20.",
+      "string": "cs3110",
+      "int": "75"
+    },
+    {
+      "bool": "false",
+      "float": "-78.7",
+      "string": "",
+      "int": "112"
+    },
+    {
+      "bool": "true",
+      "float": "98.0",
+      "string": "\n",
+      "int": "-234"
+    }
+  ],
+  "Mismatch": [
+    {
+      "1": "",
+      "Int mismatch": "",
+      "Max/Min": ""
+    },
+    {
+      "1": "50.5",
+      "Int mismatch": "17",
+      "Max/Min": "max_int"
+    },
+    {
+      "1": "0",
+      "Int mismatch": "-20",
+      "Max/Min": "min_int"
+    },
+    {
+      "1": "true",
+      "Int mismatch": "0.",
+      "Max/Min": "0"
+    },
+    {
+      "1": "false",
+      "Int mismatch": "59",
+      "Max/Min": "(-0)"
+    }
+  ]
+}

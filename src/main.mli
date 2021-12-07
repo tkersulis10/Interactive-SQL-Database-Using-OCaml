@@ -14,12 +14,15 @@ exception DatabaseNotFound of string
 exception InvalidRow of string
 (** Raised when an invalid row is searched for in a database. *)
 
-exception CannotConvertToInt
-(** Raised when trying to convert a string to int unsuccessfully. *)
+exception CannotConvertToNum
+(** Raised when trying to convert a string to a number unsuccessfully. *)
 
 exception CannotConvertElement
 (** Raised when trying to convert a string to some element is
     unsuccessful. *)
+
+exception CannotCompute
+(** Raised when trying to compute something unsuccessfully. *)
 
 exception InvalidShape
 (** Raised when a row of incorrect shape (incorrect # of fields/values)
@@ -149,20 +152,6 @@ val get_fields_list : string -> string -> string list
 (** [get_fields_list file db_name] lists the string titles of each field
     in the shape of database [db_name] inside [file]. *)
 
-val sort_field_string :
-  string -> string -> string -> (string -> string -> int) -> unit
-(** [sort_field_string file db_name field_name comparison_fun] sorts the
-    values with field name [field_name] in [db_name] of [file] according
-    to comparison function [comparison_fun]. *)
-
-val sort_field_int :
-  string -> string -> string -> (int -> int -> int) -> unit
-(** [sort_field_int file db_name field_name comparison_fun] sorts the
-    values with field name [field_name] in [db_name] of [file] according
-    to comparison function [comparison_fun]. Raises:
-    [CannotConvertToInt] if a value of [field_name] cannot be converted
-    to an int. *)
-
 val sort_field_general :
   string ->
   string ->
@@ -178,3 +167,45 @@ val sort_field_general :
     between the type of the element and a string. Raises:
     [CannotConvertElement] if a value of [field_name] cannot be
     converted to the type of the element. *)
+
+val sort_field_string :
+  string -> string -> string -> (string -> string -> int) -> unit
+(** [sort_field_string file db_name field_name comparison_fun] sorts the
+    values with field name [field_name] in [db_name] of [file] according
+    to comparison function [comparison_fun]. *)
+
+val sort_field_int :
+  string -> string -> string -> (int -> int -> int) -> unit
+(** [sort_field_int file db_name field_name comparison_fun] sorts the
+    values with field name [field_name] in [db_name] of [file] according
+    to comparison function [comparison_fun]. Raises:
+    [CannotConvertToNum] if a value of [field_name] cannot be converted
+    to an integer. *)
+
+val computation_of_any_field :
+  string ->
+  string ->
+  string ->
+  (string -> 'a) ->
+  'a ->
+  ('a -> 'a -> 'a) ->
+  'a
+(** [computation_of_any_field file db_name field_name element_of_string init computation]
+    uses List.fold_left to perform [computation] on the values with
+    field name [field_name] in [db_name] in [file] using
+    [element_of_string] and [string_of_element] to convert between an
+    element and a string. Raises: [CannotConvertElement] if a value of
+    [field_name] cannot be converted to the type of the element. Raises:
+    [CannotCompute] if there is an error when executing the computation. *)
+
+val sum_of_field : string -> string -> string -> float
+(** [sum_of_field file db_name field_name] gives the sum of all of the
+    numbers with field name [field_name] in [db_name] in [file]. Raises:
+    [CannotConvertToNum] if a value of [field_name] cannot be converted
+    to a number.*)
+
+val mean_of_field : string -> string -> string -> float
+(** [mean_of_field file db_name field_name] gives the mean of all of the
+    numbers with field name [field_name] in [db_name] in [file]. Raises:
+    [CannotConvertToNum] if a value of [field_name] cannot be converted
+    to a number.*)

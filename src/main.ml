@@ -13,9 +13,11 @@ exception InvalidRow of string
 
 exception InvalidShape
 
-exception CannotConvertToInt
+exception CannotConvertToNum
 
 exception CannotConvertElement
+
+exception CannotCompute
 
 let set_file_location (file : string) : string = "./data/" ^ file
 
@@ -606,11 +608,9 @@ let sort_field_helper
     find_value_in_database file db_name field_name
   in
   let string_list_unformatted =
-    String.split_on_char ',' string_of_values_unformatted
+    String.split_on_char '\"' string_of_values_unformatted
   in
-  List.map
-    (fun s -> String.sub s 2 (String.length s - 3))
-    string_list_unformatted
+  List.filteri (fun i s -> i mod 2 = 1) string_list_unformatted
 
 (** [update_sorted_values file db_name field_name sorted_list sorted_list_ref]
     updates all of the values with field name [field_name] in [db_name]
@@ -625,31 +625,6 @@ let update_sorted_values
     update_value file db_name field_name i (List.hd !sorted_list_ref);
     sorted_list_ref := List.tl !sorted_list_ref
   done
-
-let sort_field_string
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (comparison_fun : string -> string -> int) =
-  let string_list = sort_field_helper file db_name field_name in
-  let sorted_list = List.sort comparison_fun string_list in
-  update_sorted_values file db_name field_name sorted_list
-
-let sort_field_int
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (comparison_fun : int -> int -> int) =
-  let string_list = sort_field_helper file db_name field_name in
-  let int_list =
-    try List.map (fun s -> int_of_string s) string_list with
-    | Failure _ -> raise CannotConvertToInt
-  in
-  let sorted_list =
-    List.sort comparison_fun int_list
-    |> List.map (fun i -> string_of_int i)
-  in
-  update_sorted_values file db_name field_name sorted_list
 
 let sort_field_general
     (file : string)
@@ -671,3 +646,63 @@ let sort_field_general
     | Failure _ -> raise CannotConvertElement
   in
   update_sorted_values file db_name field_name sorted_list
+
+(** [id s] returns the string [s]. *)
+let id s : string = s
+
+let sort_field_string
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (comparison_fun : string -> string -> int) =
+  sort_field_general file db_name field_name id id comparison_fun
+
+let sort_field_int
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (comparison_fun : int -> int -> int) =
+  try
+    sort_field_general file db_name field_name int_of_string
+      string_of_int comparison_fun
+  with
+  | CannotConvertElement -> raise CannotConvertToNum
+
+let computation_of_any_field
+    (file : string)
+    (db_name : string)
+    (field_name : string)
+    (element_of_string : string -> 'a)
+    (init : 'a)
+    (computation : 'a -> 'a -> 'a) =
+  let string_list = sort_field_helper file db_name field_name in
+  let element_list =
+    try List.map (fun s -> element_of_string s) string_list with
+    | _ -> raise CannotConvertElement
+  in
+  try
+    List.fold_left (fun acc x -> computation acc x) init element_list
+  with
+  | _ -> raise CannotCompute
+
+let sum_of_field
+    (file : string)
+    (db_name : string)
+    (field_name : string) =
+  try
+    computation_of_any_field file db_name field_name float_of_string 0.
+      (fun acc x -> acc +. x)
+  with
+  | CannotConvertElement -> raise CannotConvertToNum
+
+let mean_of_field
+    (file : string)
+    (db_name : string)
+    (field_name : string) =
+  let length =
+    List.length (sort_field_helper file db_name field_name)
+  in
+  if length > 0 then
+    let total = sum_of_field file db_name field_name in
+    total /. float_of_int length
+  else 0.
