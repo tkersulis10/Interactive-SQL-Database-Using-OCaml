@@ -2,6 +2,82 @@ open OUnit2
 open Database
 open Main
 
+(* TEST PLAN: Our test suite tested the many different functions inside
+   of src/main.ml. These are the functions that dictate the
+   functionality of the database. They perform different SQL operations
+   on the database such as adding, updating, and finding values as well
+   as creating databases and other key operations. All of these
+   functions in src/main.ml are tested in this test suite. We did this
+   by constructing multiple test json files that have an existing
+   database in each one. Each test json file has a block of tests
+   associated with it. These blocks of tests are split up in the test
+   suite below and are labeled first_section_tests,
+   second_section_tests, third_section_tests, computation_tests, and
+   exception_tests. Each section of tests correspond to a different json
+   file that we are testing, except for exception_tests which we will
+   explain later.
+
+   In the first three blocks of tests (first_section_tests,
+   second_section_tests, and third_section_tests) we performed a number
+   of functions that change the json file corresponding to that json
+   file. For example, these functions may add a new row to the database,
+   update the database, or sort the values in the database. We then go
+   through and test the functions in src/main.ml that read a database
+   and output a value corresponding to that database. We go through
+   every function in src/main.ml that returns a value and test that the
+   value matches our expected output. This proves to us not only that
+   these functions that output a value are working correctly, but also
+   that the functions that we called at the beginning of the block of
+   tests produced the correct new database, and therefore are also
+   working correctly. In these three blocks of tests we made sure that
+   each function that causes a change in the database to be called to
+   prove that each function works properly.
+
+   In the fourth block of tests (computation_tests), we used a
+   pre-determined test json file named computatoin_database.json. This
+   database json file is a database that has many boundary conditions
+   and other values in it that we were not able to test in the first
+   three blocks of tests. Therefore, we did not call any additional
+   functions on it that change the database beforehand this time. We
+   simply want to test our output functions for these certain values to
+   prove to us that these functions still work on less common values.
+
+   In the fifth block of tests (exception_tests), we called functions
+   that should produce exceptions when called to make sure the
+   exceptions in our code worked properly. We used assert_raises to
+   ensure that the right exception is raised and we used multiple of the
+   test json files that we used in the previous blocks of tests to make
+   sure that exceptions worked on all of the json files. We also made
+   sure that the exception tests would not alter any of the databases
+   and instead only raise exceptions. This proved to us that our system
+   could handle bad inputs.
+
+   Our OUnit test cases cover the database functionality functions
+   through primarily black box testing. The test cases were developed by
+   looking at the specifications of the different functions and making
+   sure that they would work correctly for not only good inputs, but
+   also through bad inputs as discussed during our exception_tests. We
+   created test cases by going through the specification and entering
+   typical and boundary inputs for the arguments. Our command line in
+   CLI/main.ml, on the other hand, was manually tested. Since we already
+   tested the database functions used by the command line using OUnit,
+   we were confident of the correctness of those functions in the
+   command line. Therefore, we manually tested how the command line
+   interacted with different syntax errors, good inputs by users, and
+   bad inputs by users by running make cli and then testing inputs into
+   the command line. We also went through each command and made sure
+   that the syntax worked properly and that the interface was clear and
+   worked as intended.
+
+   As stated above, our testing approach demonstrates the correctness of
+   the system because it goes through all of the functions and checks
+   that each side effect to the database and each output from a read
+   from the database matches. Finally, after we run make test to run the
+   test cases in OUnit, we must reset the test json files to how they
+   were before running the test file since the test cases alter the test
+   json files. This ensures that the tests are consistent and work every
+   time we want to run make test. *)
+
 let test_database_1 = dbs_from_file "test_database.json"
 
 let test_database_2 = dbs_from_file "test_database2.json"
