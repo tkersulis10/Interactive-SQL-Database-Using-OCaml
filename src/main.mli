@@ -106,8 +106,8 @@ val get_db_names_list : string -> string
     the system in [file], each separated by a newline for printing into
     console. *)
 
-val list_rows : string -> string -> string
-(** [list_rows file database_name] returns string of field-value pairs
+val list_rows : string -> string -> unit
+(** [list_rows file database_name] prints a formatted string of values
     for each row a database in [file] given by [database_name], with
     each row separated by a newline. *)
 
