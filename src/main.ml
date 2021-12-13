@@ -243,42 +243,128 @@ let get_db_names_list (file : string) =
   in
   get_names_rec "" list
 
-(** [list_vals_rec vals acc] adds the field name and value name in
-    [value_list] to [acc] as a string representation. *)
-let rec list_vals_rec value_list acc =
+let gen_whitespace len =
+  if len <= 0 then ""
+  else
+    let rec gen_aux len acc =
+      if len != 0 then gen_aux (len - 1) (acc ^ " ") else acc
+    in
+    gen_aux len ""
+
+(**[get_longest_val field_value_list acc] returns the longest string
+   length value in *)
+let get_longest_val rows field =
+  let rec get_lval_aux rows field is_first acc =
+    match rows with
+    | val_list :: t ->
+        let len =
+          if is_first = true then String.length field
+          else
+            String.length
+              (Yojson.Basic.to_string
+                 (List.assoc field
+                    (Yojson.Basic.Util.to_assoc val_list)))
+        in
+        if len > acc then get_lval_aux t field false len
+        else get_lval_aux t field false acc
+    | [] -> acc
+  in
+  get_lval_aux rows field true 0
+
+(**[gen_field_longval_pairs rows fields acc] generates a list of (field,
+   length of longest value in that field) for all fields in database.*)
+let rec gen_field_longval_pairs rows fields acc =
+  match fields with
+  | field :: t ->
+      gen_field_longval_pairs rows t
+        (acc @ [ (field, get_longest_val rows field) ])
+  | [] -> acc
+
+(** [list_vals_rec value_list length_scale_list is_first is_first_sub acc]
+    adds the field name and value name in [value_list] to [acc] as a
+    string representation with added whitespace to evenly align rows. *)
+let rec list_vals_rec
+    value_list
+    length_scale_list
+    is_first
+    is_first_sub
+    acc =
   match value_list with
   | (name, value) :: t ->
-      if List.length t > 0 then
-        list_vals_rec t ",  (" ^ name ^ ": "
-        ^ Yojson.Basic.Util.to_string value
-        ^ ")" ^ acc
+      if is_first = true then
+        if is_first_sub = true then
+          list_vals_rec t length_scale_list true false
+            (acc ^ "|" ^ name
+            ^ gen_whitespace
+                (List.assoc name length_scale_list - String.length name)
+            ^ "|")
+        else
+          list_vals_rec t length_scale_list true false
+            (acc ^ name
+            ^ gen_whitespace
+                (List.assoc name length_scale_list - String.length name)
+            ^ "|")
+      else if is_first_sub = true then
+        list_vals_rec t length_scale_list false false
+          (acc ^ "|"
+          ^ Yojson.Basic.Util.to_string value
+          ^ gen_whitespace
+              (List.assoc name length_scale_list
+              - String.length (Yojson.Basic.Util.to_string value))
+          ^ "|")
       else
-        list_vals_rec t "(" ^ name ^ ": "
-        ^ Yojson.Basic.Util.to_string value
-        ^ ")" ^ acc
+        list_vals_rec t length_scale_list false false
+          (acc
+          ^ Yojson.Basic.Util.to_string value
+          ^ gen_whitespace
+              (List.assoc name length_scale_list
+              - String.length (Yojson.Basic.Util.to_string value))
+          ^ "|")
   | [] -> acc
 
 (** [list_rows_rec rows acc] goes through the list of rows [rows] and
     adds each string representation of the row to [acc] with a newline
     separator. *)
-let rec list_rows_rec rows acc =
+let rec list_rows_rec
+    rows
+    fields_list
+    length_scalings
+    is_first
+    row_acc
+    header =
   match rows with
   | val_list :: t ->
-      list_rows_rec t
-        (list_vals_rec
-           (List.rev (Yojson.Basic.Util.to_assoc val_list))
-           "\n")
-      ^ acc
+      if is_first = true then
+        list_rows_rec t fields_list length_scalings false row_acc
+          (list_vals_rec
+             (Yojson.Basic.Util.to_assoc val_list)
+             length_scalings true true "\n")
+      else
+        list_rows_rec t fields_list length_scalings false
+          (row_acc
+          ^ list_vals_rec
+              (Yojson.Basic.Util.to_assoc val_list)
+              length_scalings false true "\n")
+          header
   | [] ->
-      if String.length acc > 1 then acc
-      else "\n - Database is empty.\n\n"
+      if String.length row_acc > 0 then (header, row_acc)
+      else ("\n - Database is empty.\n\n", "")
 
 let list_rows (file : string) (database_name : string) =
+  let fields_list = get_fields_list file database_name in
   let database_row_list =
-    find_database file database_name
-    |> Yojson.Basic.Util.to_list |> List.tl |> List.rev
+    find_database file database_name |> Yojson.Basic.Util.to_list
   in
-  list_rows_rec database_row_list "\n"
+  let length_scalings =
+    gen_field_longval_pairs database_row_list fields_list []
+  in
+  let header_and_rows =
+    list_rows_rec database_row_list fields_list length_scalings true ""
+      ""
+  in
+  ANSITerminal.print_string [ ANSITerminal.red ] (fst header_and_rows);
+  print_string (snd header_and_rows);
+  print_string "\n"
 
 (** [replace_db_in_dbms database_list database_name new_database]
     creates a string representing a json (without the first "{") with
@@ -402,7 +488,9 @@ let add_field_to_all_rows
     (database_name : string)
     (field_name : string)
     (field_type : string) =
-  let _ = type_check value_name field_type in
+  let _ =
+    if value_name != "" then type_check value_name field_type else true
+  in
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let database_string =
     find_database file database_name |> Yojson.Basic.to_string

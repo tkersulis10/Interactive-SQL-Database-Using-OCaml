@@ -833,7 +833,7 @@ let main () =
         ANSITerminal.print_string [ ANSITerminal.red ] "\nDatabases:\n";
         print_string (get_db_names_list "database.json")
     | ListRows name -> begin
-        match list_rows "database.json" name with
+        match find_database "database.json" name with
         | exception DatabaseNotFound name ->
             ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
             print_string "database ";
@@ -843,7 +843,7 @@ let main () =
             print_string "\nRows of database ";
             ANSITerminal.print_string [ ANSITerminal.red ] name;
             print_string ":\n";
-            print_string (list_rows "database.json" name)
+            list_rows "database.json" name
       end
     | ListFields db_name -> begin
         match get_fields_list "database.json" db_name with
@@ -874,7 +874,7 @@ let main () =
             ANSITerminal.print_string [ ANSITerminal.red ] fname;
             print_string " not found.\n\n"
         | _ ->
-            print_string "Database ";
+            print_string "\nDatabase ";
             ANSITerminal.print_string [ ANSITerminal.red ] db_name;
             print_string " successfully sorted.\n\n")
     | Quit ->
