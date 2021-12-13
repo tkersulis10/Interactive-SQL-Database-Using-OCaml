@@ -28,6 +28,10 @@ exception InvalidShape
 (** Raised when a row of incorrect shape (incorrect # of fields/values)
     attempts to be added to a database table. *)
 
+exception WrongType of (string * string)
+(**Wrongtype (value) (field_type) is raised when value [value] does not
+   match the type [field_type] of the field it is being added to.*)
+
 val file_location : string
 (** Default file path of main DBMS*)
 
@@ -54,7 +58,7 @@ val splice_outer_parens : string -> string
     empty. Requires: [dbm] must have length of at least 2, representing
     the constant 2 outer parentheses of the database management object. *)
 
-val add_database : string -> string -> string list -> unit
+val add_database : string -> string -> (string * string) list -> unit
 (** [add_database file name values] adds a new database labeled [name]
     with values [values] to the database list in file [file] --
     Yojson.Basic.to_file file (Yojson.Basic.from_string str). *)
@@ -85,7 +89,7 @@ val clear_database : string -> string -> unit
     file is returned unchanged. *)
 
 val find_database : string -> string -> Yojson.Basic.t
-(** [find_database file database_name] returns the values of the
+(** [find_database file database_name] returns the contents of the
     database [database_name] in database file [file]. Raises:
     DatabaseNotFound "database_name" if the [database_name] is not in
     [file]. *)
@@ -113,7 +117,7 @@ val add_element_to_database : string -> string -> string -> unit
     [file]. *)
 
 val add_field_to_all_rows :
-  string -> ?val_name:string -> string -> string -> unit
+  string -> ?val_name:string -> string -> string -> string -> unit
 (** [add_element_to_all_database file database_name value_name] adds the
     element [value_name] to all rows of the database [database_name] in
     [file]. *)
@@ -209,3 +213,5 @@ val mean_of_field : string -> string -> string -> float
     numbers with field name [field_name] in [db_name] in [file]. Raises:
     [CannotConvertToNum] if a value of [field_name] cannot be converted
     to a number.*)
+
+val sort_rows : string -> string -> string -> unit

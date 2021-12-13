@@ -19,6 +19,8 @@ exception CannotConvertElement
 
 exception CannotCompute
 
+exception WrongType of (string * string)
+
 let set_file_location (file : string) : string = "./data/" ^ file
 
 (** File location, accessible via this function in the event the
@@ -34,33 +36,42 @@ let database_string (file : string) =
 let write_to_file (file : string) (db : Yojson.Basic.t) =
   Yojson.Basic.to_file (set_file_location file) db
 
-(** [convert_vals_help vals acc] is a recursive helper to
-    [convert_vals vals]. *)
-let rec convert_vals_help (vals : string list) (acc : string) : string =
-  match vals with
+(** [convert_fields_help vals acc] is a recursive helper to
+    [convert_fields fields]. *)
+let rec convert_fields_help
+    (fields_and_types : (string * string) list)
+    (acc : string) : string =
+  match fields_and_types with
   | h :: t ->
       if t = [] then
-        convert_vals_help t (acc ^ "\"" ^ h ^ "\"" ^ ":" ^ "\"\"")
+        convert_fields_help t
+          (acc ^ "\"" ^ fst h ^ "\"" ^ ":" ^ "\"" ^ snd h ^ "\"")
       else
-        convert_vals_help t (acc ^ "\"" ^ h ^ "\"" ^ ":" ^ "\"\"" ^ ",")
+        convert_fields_help t
+          (acc ^ "\"" ^ fst h ^ "\"" ^ ":" ^ "\"" ^ snd h ^ "\"" ^ ",")
   | [] -> acc ^ "}"
 
-(** [convert_vals vals] converts a list of values [vals] into a json
+(** [convert_fields fields] converts a list of values [vals] into a json
     string. Example: [convert_vals (\["name","id","location"\]) ""]
     gives "{"name" : "", "id" : "","location" : ""}" *)
-let convert_vals (vals : string list) : string =
-  convert_vals_help vals "{"
+let convert_fields (fields_and_types : (string * string) list) : string
+    =
+  convert_fields_help fields_and_types "{"
 
 let splice_outer_parens (dbm : string) =
   let spliced = String.sub dbm 1 (String.length dbm - 2) in
   if String.length spliced > 0 then spliced ^ "," else spliced
 
-let add_database (file : string) (name : string) (values : string list)
-    =
+let add_database
+    (file : string)
+    (name : string)
+    (fields_types : (string * string) list) =
   let str =
     "{"
     ^ splice_outer_parens (database_string file)
-    ^ "\"" ^ name ^ "\"" ^ ":[" ^ convert_vals values ^ "]}"
+    ^ "\"" ^ name ^ "\"" ^ ":["
+    ^ convert_fields fields_types
+    ^ "]}"
   in
   let file_out = open_out (set_file_location file) in
   Printf.fprintf file_out "%s" str;
@@ -143,12 +154,17 @@ let rec find_database (file : string) (database_name : string) =
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   find_database_helper database_name database_list
 
-let get_fields_list (file : string) (db_name : string) =
+let get_fields_types_list (file : string) (db_name : string) =
   let database_row_list =
     find_database file db_name |> Yojson.Basic.Util.to_list
   in
   List.hd database_row_list
-  |> Yojson.Basic.Util.to_assoc |> List.map fst |> List.map String.trim
+  |> Yojson.Basic.Util.to_assoc
+  |> List.map (fun (x, y) -> (x, Yojson.Basic.to_string y))
+
+let get_fields_list (file : string) (db_name : string) =
+  let fields_types = get_fields_types_list file db_name in
+  List.map (fun (x, y) -> x) fields_types
 
 (** [write_all_databases_one_cleared file database_name databases field_list]
     writes all the databases in database list [databases] to file [file]
@@ -158,22 +174,22 @@ let rec write_all_databases_one_cleared
     (file : string)
     (database_name : string)
     (databases : (string * Basic.t) list)
-    (field_list : string list) =
+    (fields_types : (string * string) list) =
   match databases with
   | [] -> ()
   | (name, values) :: t ->
       let _ =
         if database_name = name then
-          add_database file database_name field_list
+          add_database file database_name fields_types
         else add_database_t file name values
       in
-      write_all_databases_one_cleared file database_name t field_list
+      write_all_databases_one_cleared file database_name t fields_types
 
 let clear_database (file : string) (name : string) =
-  let fields = get_fields_list file name in
+  let fields_types = get_fields_types_list file name in
   let databases = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let _ = clear_database_file file in
-  write_all_databases_one_cleared file name databases fields
+  write_all_databases_one_cleared file name databases fields_types
 
 (** [find_value_helper value_list value_name] returns the value
     associated with the value [value_name] in the list of values
@@ -264,11 +280,11 @@ let list_rows (file : string) (database_name : string) =
   in
   list_rows_rec database_row_list "\n"
 
-(** [add_element_helper database_list database_name new_database]
+(** [replace_db_in_dbms database_list database_name new_database]
     creates a string representing a json (without the first "{") with
     [new_database] in place for database [database_name] in
     [database_list]. *)
-let rec add_element_helper
+let rec replace_db_in_dbms
     (database_list : (string * Basic.t) list)
     (database_name : string)
     (new_database : string) =
@@ -277,11 +293,11 @@ let rec add_element_helper
   | (name, values) :: t ->
       if name = database_name then
         "," ^ "\"" ^ name ^ "\": " ^ new_database
-        ^ add_element_helper t database_name new_database
+        ^ replace_db_in_dbms t database_name new_database
       else
         "," ^ "\"" ^ name ^ "\": "
         ^ Yojson.Basic.to_string values
-        ^ add_element_helper t database_name new_database
+        ^ replace_db_in_dbms t database_name new_database
 
 (** [write_new_db file db_name db_list table_list template] writes the
     new database [db_name] in [file] after adding an element to the
@@ -290,14 +306,14 @@ let write_new_db file db_name db_list table_list template =
   if List.length table_list < 3 then
     let str = template ^ "}]" in
     let new_str =
-      let after_helper = add_element_helper db_list db_name str in
+      let after_helper = replace_db_in_dbms db_list db_name str in
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
     write_to_file file (Yojson.Basic.from_string new_str)
   else
     let str = template ^ "}" ^ String.concat "}" (List.tl table_list) in
     let new_str =
-      let after_helper = add_element_helper db_list db_name str in
+      let after_helper = replace_db_in_dbms db_list db_name str in
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
     write_to_file file (Yojson.Basic.from_string new_str)
@@ -320,6 +336,7 @@ let add_element_to_database
 let rec string_value_adder
     (table_list : string list)
     (field_name : string)
+    (field_type : string)
     (value_name : string)
     (first_pass : bool) =
   match table_list with
@@ -327,28 +344,76 @@ let rec string_value_adder
   | h :: t ->
       if h = "]" then "]"
       else if first_pass then
-        h ^ ",\"" ^ field_name ^ "\":" ^ "\"" ^ "\"" ^ "}"
-        ^ string_value_adder t field_name value_name false
+        h ^ ",\"" ^ field_name ^ "\":" ^ "\"" ^ field_type ^ "\"" ^ "}"
+        ^ string_value_adder t field_name field_type value_name false
       else
         h ^ ",\"" ^ field_name ^ "\":" ^ "\"" ^ value_name ^ "\"" ^ "}"
-        ^ string_value_adder t field_name value_name false
+        ^ string_value_adder t field_name field_type value_name false
+
+(** [get_field_type file db_name field_name] returns a string of the
+    type of field [field_name] in database db_name in file file*)
+let get_field_type
+    (file : string)
+    (db_name : string)
+    (field_name : string) =
+  let db_string =
+    find_database file db_name |> Yojson.Basic.to_string
+  in
+  let table_list = String.split_on_char '}' db_string in
+  let field_type_quotes =
+    String.sub (List.hd table_list) 1
+      (String.length (List.hd table_list) - 1)
+    ^ "}"
+    |> Yojson.Basic.from_string |> Yojson.Basic.Util.to_assoc
+    |> List.assoc field_name |> Yojson.Basic.to_string
+  in
+  String.sub field_type_quotes 1 (String.length field_type_quotes - 2)
+
+(**[type_check value field_type] checks whether [value] is of type
+   [field_type], returning true if so, and a WrongType exception if not.*)
+let type_check (value : string) (field_type : string) =
+  if value != "" then
+    match field_type with
+    | "int" -> (
+        try
+          let _ = int_of_string value in
+          true
+        with
+        | _ -> raise (WrongType (value, field_type)))
+    | "bool" ->
+        if
+          String.lowercase_ascii value = "true"
+          || String.lowercase_ascii value = "false"
+        then true
+        else raise (WrongType (value, field_type))
+    | "float" -> (
+        try
+          let _ = float_of_string value in
+          true
+        with
+        | _ -> raise (WrongType (value, field_type)))
+    | "string" -> true
+    | _ -> raise (WrongType (value, field_type))
+  else true
 
 let add_field_to_all_rows
     (file : string)
     ?val_name:(value_name = "")
     (database_name : string)
-    (field_name : string) =
+    (field_name : string)
+    (field_type : string) =
+  let _ = type_check value_name field_type in
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let database_string =
     find_database file database_name |> Yojson.Basic.to_string
   in
   let table_list = String.split_on_char '}' database_string in
   let new_database =
-    string_value_adder table_list field_name value_name true
+    string_value_adder table_list field_name field_type value_name true
   in
   let new_str =
     let after_helper =
-      add_element_helper database_list database_name new_database
+      replace_db_in_dbms database_list database_name new_database
     in
     "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
   in
@@ -360,28 +425,29 @@ let add_field_to_all_rows
 let rec update_element_helper
     (value_list : (string * Basic.t) list)
     (field_name : string)
+    (field_type : string)
     (new_value : string)
     (updated : bool) =
+  let _ = type_check new_value field_type in
   match value_list with
   | [] -> if updated then "}" else raise (FieldNotFound field_name)
   | (name, values) :: t ->
       if name = field_name then
         "," ^ "\"" ^ name ^ "\": \"" ^ new_value ^ "\""
-        ^ update_element_helper t field_name new_value true
+        ^ update_element_helper t field_name field_type new_value true
       else
         "," ^ "\"" ^ name ^ "\": "
         ^ Yojson.Basic.to_string values
-        ^ update_element_helper t field_name new_value updated
+        ^ update_element_helper t field_name field_type new_value
+            updated
 
-(** [update_row_finder table_list element_row] finds the [element_row]th
-    row in [table_list]. *)
-let rec update_row_finder (table_list : string list) (element_row : int)
-    =
+(** [row_finder table_list element_row] finds the [element_row]th row in
+    [table_list]. *)
+let rec row_finder (table_list : string list) (element_row : int) =
   match table_list with
   | [] -> raise (InvalidRow "Row not in database")
   | h :: t ->
-      if element_row = 0 then h
-      else update_row_finder t (element_row - 1)
+      if element_row = 0 then h else row_finder t (element_row - 1)
 
 (** [update_row_in_database table_list element_row new_row] formats the
     database with the rows in [table_list] with [new_row] inserted into
@@ -402,13 +468,24 @@ let rec update_row_in_database
     new string representation of a database with [new_value] in for
     [field_name] in [element_row] from [table_list]. *)
 let new_database field_name new_value element_row table_list =
-  let wanted_row = update_row_finder table_list element_row in
+  let wanted_row = row_finder table_list element_row in
+  let field_type_quotes =
+    String.sub (List.hd table_list) 1
+      (String.length (List.hd table_list) - 1)
+    ^ "}"
+    |> Yojson.Basic.from_string |> Yojson.Basic.Util.to_assoc
+    |> List.assoc field_name |> Yojson.Basic.to_string
+  in
+  let field_type =
+    String.sub field_type_quotes 1 (String.length field_type_quotes - 2)
+  in
   let value_list =
     String.sub wanted_row 1 (String.length wanted_row - 1) ^ "}"
     |> Yojson.Basic.from_string |> Yojson.Basic.Util.to_assoc
   in
   let unclean_row =
-    update_element_helper value_list field_name new_value false
+    update_element_helper value_list field_name field_type new_value
+      false
   in
   let new_unclean_row =
     String.sub unclean_row 0 (String.length unclean_row - 1)
@@ -443,7 +520,7 @@ let update_value
         new_database field_name new_value element_row table_list
       in
       let new_str =
-        let after_helper = add_element_helper db_list db_name new_db in
+        let after_helper = replace_db_in_dbms db_list db_name new_db in
         "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
       in
       write_to_file file (Yojson.Basic.from_string new_str)
@@ -526,7 +603,8 @@ let update_all
     new_value
 
 (** [delete_rows_in_database_iter row_list del_rows acc] removes the
-    rows matching row numbers in [del_rows] from [row_list] *)
+    rows matching row numbers in [del_rows] from [row_list]. Requires
+    del_rows is a sorted list. *)
 let rec delete_rows_in_database_iter
     (row_list : string list)
     (del_rows : int list)
@@ -559,21 +637,29 @@ let rec delete_rows_in_database
   in
   let new_str =
     let after_helper =
-      add_element_helper database_list db_name new_database
+      replace_db_in_dbms database_list db_name new_database
     in
     "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
   in
   write_to_file file (Yojson.Basic.from_string new_str)
 
-let rec create_row (field_val_pairs : (string * string) list) =
+let rec create_row
+    (field_val_pairs : (string * string) list)
+    (db_name : string) =
   match field_val_pairs with
   | (field, value) :: t ->
+      let _ =
+        if String.length (String.trim value) != 0 then
+          type_check (String.trim value)
+            (get_field_type "database.json" db_name field)
+        else true
+      in
       if t = [] then
         "\"" ^ String.trim field ^ "\"" ^ ": " ^ "\""
-        ^ String.trim value ^ "\"" ^ create_row t
+        ^ String.trim value ^ "\"" ^ create_row t db_name
       else
         "\"" ^ String.trim field ^ "\"" ^ ": " ^ "\""
-        ^ String.trim value ^ "\"" ^ "," ^ create_row t
+        ^ String.trim value ^ "\"" ^ "," ^ create_row t db_name
   | [] -> "}]"
 
 let add_row (file : string) (db_name : string) (values : string list) =
@@ -589,15 +675,94 @@ let add_row (file : string) (db_name : string) (values : string list) =
     raise InvalidShape
   else
     let updated_db =
-      trimmed ^ ",{" ^ create_row (List.combine field_names values)
+      trimmed ^ ",{"
+      ^ create_row (List.combine field_names values) db_name
     in
     let new_str =
       let after_helper =
-        add_element_helper database_list db_name updated_db
+        replace_db_in_dbms database_list db_name updated_db
       in
       "{" ^ String.sub after_helper 1 (String.length after_helper - 1)
     in
     write_to_file file (Yojson.Basic.from_string new_str)
+
+let rec construct_sorted_db row_list pairs header db_acc is_first =
+  match pairs with
+  | (index, value) :: t ->
+      let current_row = row_finder row_list index in
+      if is_first = true then
+        construct_sorted_db row_list t header (db_acc ^ current_row)
+          false
+      else
+        construct_sorted_db row_list t header
+          (db_acc ^ ", " ^ current_row)
+          false
+  | [] ->
+      if is_first then "[" ^ header ^ "]"
+      else "[" ^ header ^ "," ^ db_acc ^ "]"
+
+let row_comp_func x y conv_func =
+  let v1, v2 = (String.trim (snd x), String.trim (snd y)) in
+  match (String.length v1, String.length v2) with
+  | 0, 0 -> 0
+  | 0, _ -> -1
+  | _, 0 -> 1
+  | _, _ -> compare (conv_func v1) (conv_func v2)
+
+let sort_rows (file : string) (db_name : string) (sort_field : string) =
+  let row_list =
+    try
+      dbs_from_file file |> member db_name |> Yojson.Basic.Util.to_list
+      |> List.tl
+      |> List.map Yojson.Basic.Util.to_assoc
+    with
+    | _ -> raise (DatabaseNotFound db_name)
+  in
+  let rec get_row_val_pair row_list rownum_acc list_acc =
+    try
+      match row_list with
+      | h :: t ->
+          get_row_val_pair t (rownum_acc + 1)
+            (list_acc
+            @ [
+                ( rownum_acc,
+                  Yojson.Basic.Util.to_string (List.assoc sort_field h)
+                );
+              ])
+      | [] -> list_acc
+    with
+    | _ -> raise (FieldNotFound sort_field)
+  in
+  let header =
+    dbs_from_file file |> member db_name |> Yojson.Basic.Util.to_list
+    |> List.hd |> Yojson.Basic.to_string
+  in
+  let str_row_list =
+    dbs_from_file file |> member db_name |> Yojson.Basic.Util.to_list
+    |> List.tl
+    |> List.map Yojson.Basic.to_string
+  in
+  let pairs = get_row_val_pair row_list 0 [] in
+  let sort_type = get_field_type file db_name sort_field in
+  let sorted_row_nums =
+    match sort_type with
+    | "int" ->
+        List.sort (fun x y -> row_comp_func x y int_of_string) pairs
+    | "bool" ->
+        List.sort (fun x y -> row_comp_func x y bool_of_string) pairs
+    | "float" ->
+        List.sort (fun x y -> row_comp_func x y float_of_string) pairs
+    | _ -> List.sort (fun x y -> row_comp_func x y (fun x -> x)) pairs
+  in
+  let sorted_db_string =
+    construct_sorted_db str_row_list sorted_row_nums header "" true
+  in
+  let db_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+  let penult_db = replace_db_in_dbms db_list db_name sorted_db_string in
+  let final_db =
+    "{" ^ String.sub penult_db 1 (String.length penult_db - 1)
+  in
+  write_to_file file (Yojson.Basic.from_string final_db)
 
 (** [sort_field_helper file db_name field_name] creates a string list
     which is a list of the values with field name [field_name] in

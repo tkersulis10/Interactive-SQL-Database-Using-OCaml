@@ -13,10 +13,6 @@ exception Malformed
 exception Invalid
 (** Raised when a command is unknown. *)
 
-val parse_args : string list -> string list -> string list
-(** [parse_args args acc] converts a list [args] into a list of
-    arguments without any empty strings. *)
-
 val cmd_do : string -> string list -> command
 (** [cmd_do cmd args] handles the arguments [args] of the command [cmd]. *)
 
