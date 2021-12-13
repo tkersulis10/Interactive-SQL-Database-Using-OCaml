@@ -2,15 +2,16 @@ open Database
 open Main
 
 type command =
-  | Create of (string * string list)
+  | Addfield of (string * string * string * string)
+  | Addrow of (string * string list)
+  | Create of (string * (string * string) list)
   | Delete of string
   | DeleteRow of (string * string * string)
-  | List
-  | ListRows of string
-  | ListFields of string
   | Get of (string * string)
-  | Addrow of (string * string list)
-  | Addfield of (string * string * string)
+  | List
+  | ListFields of string
+  | ListRows of string
+  | Sort of (string * string)
   | Update of (string * string * string * string * string)
   | Help
   | Quit
@@ -22,6 +23,8 @@ exception NoArgs
 exception Malformed
 
 exception Invalid
+
+exception UnsupportedType of string
 
 (** Help message for when Help command is typed. *)
 let print_help_msg () =
@@ -237,6 +240,13 @@ let rec run_update_list row_list db_name field_name new_val num_updated
       match
         update_value "database.json" db_name field_name h new_val
       with
+      | exception WrongType (vname, exp_type) ->
+          ANSITerminal.print_string [ ANSITerminal.red ] "\nError! ";
+          print_string "Value: ";
+          ANSITerminal.print_string [ ANSITerminal.red ] vname;
+          print_string " cannot be added to field with type: ";
+          ANSITerminal.print_string [ ANSITerminal.green ] exp_type;
+          print_string "\n\n"
       | exception _ ->
           print_string
             "Error accessing database rows. Partial update may be \
@@ -257,16 +267,42 @@ let rec run_update_list row_list db_name field_name new_val num_updated
           ("\n" ^ "No field" ^ field_name ^ " exists in database"
          ^ db_name ^ ".\n\n")
 
-let rec parse_args (args : string list) acc : string list =
-  match args with
-  | h :: t ->
-      if String.length h > 0 then parse_args t (acc @ [ h ])
-      else parse_args t acc
-  | [] -> if List.length acc > 0 then acc else raise NoArgs
+(** gets a list of (field, type) for each field in the create table
+    arguments*)
+let parse_args (args : string list) acc : (string * string) list =
+  let combined = String.concat " " args in
+  let pair_split = String.split_on_char ',' combined in
+  let construct_tuple (fields_types : string list) =
+    match fields_types with
+    | field :: t -> (
+        match t with
+        | typename :: t -> (
+            match String.trim (String.lowercase_ascii typename) with
+            | "" -> (String.trim field, "string")
+            | "string"
+            | "int"
+            | "float"
+            | "bool" ->
+                ( String.trim field,
+                  String.trim (String.lowercase_ascii typename) )
+            | _ -> raise (UnsupportedType typename))
+        | [] -> raise Malformed)
+    | [] -> raise NoArgs
+  in
+  let rec make_pair_list string_pairs acc =
+    match string_pairs with
+    | h :: t ->
+        if List.length (String.split_on_char ':' h) = 2 then
+          make_pair_list t
+            (acc @ [ construct_tuple (String.split_on_char ':' h) ])
+        else raise Malformed
+    | [] -> acc
+  in
+  make_pair_list pair_split []
 
-(** [get_create_args args] extracts a tuple of (name, field_name_args)
-    given a create table command from args list [args]. Raises: NoArgs
-    if no args are available. *)
+(** [get_create_args args] extracts a tuple of (name,
+    field/type_name_args) given a create table command from args list
+    [args]. Raises: NoArgs if no args are available. *)
 let rec get_create_args args =
   match args with
   | h :: t ->
@@ -293,32 +329,55 @@ let rec get_get_args val_name args =
 (** [get_addfield_args args] extracts a tuple of (field_name,
     database_name, value_name) given an add field _ to _ as _ command
     from args list [args] . Raises: NoArgs if no args are available or
-    Malformed if incorrectly formatted. *)
+    Malformed if incorrectly formatted.
+
+    let field_type = let header = List.hd table_list in String.sub
+    header 1 (String.length header - 1) ^ "}" |>
+    Yojson.Basic.from_string |> Yojson.Basic.Util.to_assoc |> List.assoc
+    field_name |> Yojson.Basic.to_string*)
 let get_addfield_args args =
-  match args with
-  | h :: t -> (
-      let field_name = h in
-      match t with
-      | h :: t ->
-          if h = "to" then
+  let combined = String.concat " " args in
+  let field_and_type = String.split_on_char ':' combined in
+  let field_name, field_type, rest_args =
+    match field_and_type with
+    | fname :: t -> (
+        match t with
+        | h :: t -> (
+            match String.split_on_char ' ' (String.trim h) with
+            | ftype :: rest -> (fname, ftype, rest)
+            | [] -> raise Malformed)
+        | [] -> (
+            match args with
+            | fname_notype :: t -> (fname_notype, "string", t)
+            | [] -> raise NoArgs))
+    | [] -> raise Malformed
+  in
+  match rest_args with
+  | h :: t ->
+      if h = "to" then
+        match t with
+        | h :: t -> (
+            let db = h in
             match t with
-            | h :: t -> (
-                let db = h in
-                match t with
-                | h :: t ->
-                    if h = "as" then
-                      match t with
-                      | h :: t ->
-                          let value_name = h in
-                          (field_name, db, value_name)
-                      | [] -> raise NoArgs
-                    else raise Malformed
-                | [] ->
-                    let value_name = "" in
-                    (field_name, db, value_name))
-            | [] -> raise NoArgs
-          else raise Malformed
-      | [] -> raise NoArgs)
+            | h :: t ->
+                if h = "as" then
+                  match t with
+                  | h :: t ->
+                      let value_name = h in
+                      ( String.trim field_name,
+                        String.lowercase_ascii field_type,
+                        String.trim db,
+                        String.trim value_name )
+                  | [] -> raise NoArgs
+                else raise Malformed
+            | [] ->
+                let value_name = "" in
+                ( String.trim field_name,
+                  String.lowercase_ascii field_type,
+                  String.trim db,
+                  String.trim value_name ))
+        | [] -> raise NoArgs
+      else raise Malformed
   | [] -> raise NoArgs
 
 (** [get_deleterow_args args] extracts a tuple of (db_name, comp_field,
@@ -406,6 +465,22 @@ let get_addrow_vals args =
   let combined = String.concat " " args in
   String.split_on_char ',' combined
 
+let get_sort_args args =
+  match args with
+  | h :: t -> (
+      let db_name = h in
+      match t with
+      | h :: t ->
+          if h = "by" then
+            match t with
+            | h :: t ->
+                let sort_field = h in
+                (db_name, sort_field)
+            | [] -> raise NoArgs
+          else raise Malformed
+      | [] -> raise NoArgs)
+  | [] -> raise NoArgs
+
 let cmd_do (cmd : string) (args : string list) =
   match cmd with
   | "addrow" ->
@@ -427,6 +502,7 @@ let cmd_do (cmd : string) (args : string list) =
     end
   | "deleterow" -> DeleteRow (get_deleterow_args args)
   | "update" -> Update (get_update_args args)
+  | "sort" -> Sort (get_sort_args args)
   | "get" -> begin
       match args with
       | h :: t -> get_get_args h t
@@ -479,6 +555,7 @@ let cmd_read cmd lst =
           else raise Malformed
       | [] -> raise Malformed
     end
+  | "sort" -> cmd_do "sort" lst
   | "update" -> cmd_do "update" lst
   | "get" -> cmd_do "get" lst
   | "quit" -> Quit
@@ -533,21 +610,36 @@ let main () =
               (String.concat ", "
                  (get_fields_list "database.json" db_name));
             print_string "\n\n"
+        | exception WrongType (vname, field_t) ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError! ";
+            print_string "Value: ";
+            ANSITerminal.print_string [ ANSITerminal.red ] vname;
+            print_string " cannot be added to field with type: ";
+            ANSITerminal.print_string [ ANSITerminal.green ] field_t;
+            print_string "\n\n"
         | _ ->
             print_string "\n\nRow successfully added to ";
             ANSITerminal.print_string [ ANSITerminal.green ] db_name;
             print_string ".\n\n"
       end
-    | Addfield (field_name, database_name, value_name) -> begin
+    | Addfield (field_name, field_type, database_name, value_name) ->
+    begin
         match
           add_field_to_all_rows "database.json" ~val_name:value_name
-            database_name field_name
+            database_name field_name field_type
         with
         | exception DatabaseNotFound n ->
             ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
             print_string " database ";
             ANSITerminal.print_string [ ANSITerminal.red ] n;
             print_string " not found.\n\n"
+        | exception WrongType (vname, field_t) ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError! ";
+            print_string "Value: ";
+            ANSITerminal.print_string [ ANSITerminal.red ] vname;
+            print_string " cannot be added to field with type: ";
+            ANSITerminal.print_string [ ANSITerminal.green ] field_t;
+            print_string "\n\n"
         | _ -> print_string "\n\nTable successfully updated.\n\n"
       end
     | Get (val_name, db_name) -> begin
@@ -725,7 +817,7 @@ let main () =
           | exception _ ->
               ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
               print_string
-                ("no field " ^ comp_field ^ " exists in database");
+                ("no field " ^ comp_field ^ " exists in database ");
               ANSITerminal.print_string [ ANSITerminal.green ] db_name;
               print_string ".\n\n"
           | h :: t ->
@@ -769,6 +861,22 @@ let main () =
                  (get_fields_list "database.json" db_name));
             print_string "\n\n"
       end
+    | Sort (db_name, sort_field) -> (
+        match sort_rows "database.json" db_name sort_field with
+        | exception DatabaseNotFound name ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] name;
+            print_string " not found.\n\n"
+        | exception FieldNotFound fname ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] fname;
+            print_string " not found.\n\n"
+        | _ ->
+            print_string "Database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] db_name;
+            print_string " successfully sorted.\n\n")
     | Quit ->
         ANSITerminal.print_string [ ANSITerminal.green ]
           "\nChanges have been saved. Exiting...\n\n\n";
@@ -787,6 +895,11 @@ let main () =
     | exception NoArgs ->
         ANSITerminal.print_string [ ANSITerminal.red ]
           "\nNo arguments or invalid argument number detected.\n\n"
+    | exception UnsupportedType t ->
+        ANSITerminal.print_string [ ANSITerminal.red ] "\nError! ";
+        print_string "Field type: ";
+        ANSITerminal.print_string [ ANSITerminal.red ] (String.trim t);
+        print_string " is not supported.\n\n"
   done
 
 (*Execute engine*)
