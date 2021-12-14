@@ -106,6 +106,10 @@ val get_db_names_list : string -> string
     the system in [file], each separated by a newline for printing into
     console. *)
 
+val get_field_type : string -> string -> string -> string
+(** [get_field_type file db_name field] returns a string representation
+    of the type of field [field] in database [db_name] *)
+
 val list_rows : string -> string -> unit
 (** [list_rows file database_name] prints a formatted string of values
     for each row a database in [file] given by [database_name], with
@@ -121,6 +125,10 @@ val add_field_to_all_rows :
 (** [add_element_to_all_database file database_name value_name] adds the
     element [value_name] to all rows of the database [database_name] in
     [file]. *)
+
+val delete_field : string -> string -> string -> unit
+(** [delete_field file db_name field_name] removes the column with field
+    [field_name] from database [db_name]*)
 
 val find_row : string -> string -> string -> string -> int list
 (** [find_row file database_name field_name value_name] returns the row
@@ -156,62 +164,19 @@ val get_fields_list : string -> string -> string list
 (** [get_fields_list file db_name] lists the string titles of each field
     in the shape of database [db_name] inside [file]. *)
 
-val sort_field_general :
-  string ->
-  string ->
-  string ->
-  (string -> 'a) ->
-  ('a -> string) ->
-  ('a -> 'a -> int) ->
-  unit
-(** [sort_field_general file db_name field_name element_of_string string_of_element comparison_fun]
-    sorts the values with field name [field_name] in [db_name] of [file]
-    according to comparison function [comparison_fun] with conversion
-    functions [element_of_string] and [string_of_element] to convert
-    between the type of the element and a string. Raises:
-    [CannotConvertElement] if a value of [field_name] cannot be
-    converted to the type of the element. *)
+val sort_rows : string -> string -> string -> unit
+(** [sort_rows file db_name sort_field] sorts the rows of database
+    [db_name] in file [file] according to each row's value in field
+    [sort_field]*)
 
-val sort_field_string :
-  string -> string -> string -> (string -> string -> int) -> unit
-(** [sort_field_string file db_name field_name comparison_fun] sorts the
-    values with field name [field_name] in [db_name] of [file] according
-    to comparison function [comparison_fun]. *)
-
-val sort_field_int :
-  string -> string -> string -> (int -> int -> int) -> unit
-(** [sort_field_int file db_name field_name comparison_fun] sorts the
-    values with field name [field_name] in [db_name] of [file] according
-    to comparison function [comparison_fun]. Raises:
-    [CannotConvertToNum] if a value of [field_name] cannot be converted
-    to an integer. *)
-
-val computation_of_any_field :
-  string ->
-  string ->
-  string ->
-  (string -> 'a) ->
-  'a ->
-  ('a -> 'a -> 'a) ->
-  'a
-(** [computation_of_any_field file db_name field_name element_of_string init computation]
-    uses List.fold_left to perform [computation] on the values with
-    field name [field_name] in [db_name] in [file] using
-    [element_of_string] and [string_of_element] to convert between an
-    element and a string. Raises: [CannotConvertElement] if a value of
-    [field_name] cannot be converted to the type of the element. Raises:
-    [CannotCompute] if there is an error when executing the computation. *)
-
-val sum_of_field : string -> string -> string -> float
+val sum_of_field : string -> string -> string -> string
 (** [sum_of_field file db_name field_name] gives the sum of all of the
     numbers with field name [field_name] in [db_name] in [file]. Raises:
     [CannotConvertToNum] if a value of [field_name] cannot be converted
     to a number.*)
 
-val mean_of_field : string -> string -> string -> float
+val mean_of_field : string -> string -> string -> string
 (** [mean_of_field file db_name field_name] gives the mean of all of the
     numbers with field name [field_name] in [db_name] in [file]. Raises:
     [CannotConvertToNum] if a value of [field_name] cannot be converted
     to a number.*)
-
-val sort_rows : string -> string -> string -> unit
