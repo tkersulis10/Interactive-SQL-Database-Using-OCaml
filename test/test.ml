@@ -12,37 +12,38 @@ open Main
    database in each one. Each test json file has a block of tests
    associated with it. These blocks of tests are split up in the test
    suite below and are labeled first_section_tests,
-   second_section_tests, third_section_tests, computation_tests, and
-   exception_tests. Each section of tests correspond to a different json
-   file that we are testing, except for exception_tests which we will
-   explain later.
+   second_section_tests, third_section_tests, fourth_section_tests,
+   computation_tests, and exception_tests. Each section of tests
+   correspond to a different json file that we are testing, except for
+   exception_tests which we will explain later.
 
-   In the first three blocks of tests (first_section_tests,
-   second_section_tests, and third_section_tests) we performed a number
-   of functions that change the json file corresponding to that json
-   file. For example, these functions may add a new row to the database,
-   update the database, or sort the values in the database. We then go
-   through and test the functions in src/main.ml that read a database
-   and output a value corresponding to that database. We go through
-   every function in src/main.ml that returns a value and test that the
-   value matches our expected output. This proves to us not only that
-   these functions that output a value are working correctly, but also
-   that the functions that we called at the beginning of the block of
-   tests produced the correct new database, and therefore are also
-   working correctly. In these three blocks of tests we made sure that
-   each function that causes a change in the database to be called to
-   prove that each function works properly.
+   In the first four blocks of tests (first_section_tests,
+   second_section_tests, third_section_tests, and fourth_section_tests)
+   we performed a number of functions that change the json file
+   corresponding to that json file. For example, these functions may add
+   a new row to the database, update the database, or sort the values in
+   the database. We then go through and test the functions in
+   src/main.ml that read a database and output a value corresponding to
+   that database. We go through every function in src/main.ml that
+   returns a value and test that the value matches our expected output.
+   This proves to us not only that these functions that output a value
+   are working correctly, but also that the functions that we called at
+   the beginning of the block of tests produced the correct new
+   database, and therefore are also working correctly. In these four
+   blocks of tests we made sure that each function that causes a change
+   in the database to be called to prove that each function works
+   properly.
 
-   In the fourth block of tests (computation_tests), we used a
+   In the fifth block of tests (computation_tests), we used a
    pre-determined test json file named computatoin_database.json. This
    database json file is a database that has many boundary conditions
    and other values in it that we were not able to test in the first
-   three blocks of tests. Therefore, we did not call any additional
+   four blocks of tests. Therefore, we did not call any additional
    functions on it that change the database beforehand this time. We
    simply want to test our output functions for these certain values to
    prove to us that these functions still work on less common values.
 
-   In the fifth block of tests (exception_tests), we called functions
+   In the sixth block of tests (exception_tests), we called functions
    that should produce exceptions when called to make sure the
    exceptions in our code worked properly. We used assert_raises to
    ensure that the right exception is raised and we used multiple of the
@@ -477,6 +478,83 @@ let third_section_tests =
       "test_database3.json" "test" "3" "-0.5";
   ]
 
+let fourth_section_tests =
+  let _ =
+    add_row "test_database.json" "Users" [ "hello"; "-50"; "bye" ]
+  in
+  let _ =
+    add_row "test_database.json" "test" [ "f"; "g"; "h"; "i"; "j" ]
+  in
+  let _ =
+    add_row "test_database.json" "test" [ "k"; "l"; "m"; "n"; "o" ]
+  in
+  let _ = delete_field "test_database.json" "Users" "name" in
+  let _ = sort_rows "test_database.json" "Users" "age" in
+  [
+    update_file_test
+      "tests add_row, delete_field, and sort_rows in test_database.json"
+      "test_database.json"
+      "{\"Users\":[{\"age\":\"int\",\"fact\":\"string\"},{\"age\":\"-50\",\"fact\":\"bye\"},{\"age\":\"20\",\"fact\":\"is \
+       writing code right \
+       now.\"}],\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"},{\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"},{\"1\":\"f\",\"2\":\"g\",\"3\":\"h\",\"4\":\"i\",\"5\":\"j\"},{\"1\":\"k\",\"2\":\"l\",\"3\":\"m\",\"4\":\"n\",\"5\":\"o\"}]}";
+    find_database_test "find_database for test_database.json"
+      "test_database.json" "Users"
+      "{\"age\":\"int\",\"fact\":\"string\"}, \
+       {\"age\":\"-50\",\"fact\":\"bye\"}, \
+       {\"age\":\"20\",\"fact\":\"is writing code right now.\"}";
+    find_database_test "find_database for test_database.json"
+      "test_database.json" "test"
+      "{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"}, \
+       {\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}, \
+       {\"1\":\"f\",\"2\":\"g\",\"3\":\"h\",\"4\":\"i\",\"5\":\"j\"}, \
+       {\"1\":\"k\",\"2\":\"l\",\"3\":\"m\",\"4\":\"n\",\"5\":\"o\"}";
+    find_value_in_database_test
+      "find_value_in_database for test_database.json"
+      "test_database.json" "Users" "age" "\n\"-50\", \"20\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database.json"
+      "test_database.json" "Users" "fact"
+      "\n\"bye\", \"is writing code right now.\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database.json"
+      "test_database.json" "test" "1" "\n\"a\", \"f\", \"k\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database.json"
+      "test_database.json" "test" "2" "\n\"b\", \"g\", \"l\"";
+    find_value_in_database_test
+      "find_value_in_database for test_database.json"
+      "test_database.json" "test" "3" "\n\"c\", \"h\", \"m\"";
+    get_db_names_list_test "get_db_names for test_database.json"
+      "test_database.json" "  -  Users\n  -  test\n\n";
+    find_row_test
+      "find_row for test_database.json where there is one occurrence \
+       of a value"
+      "test_database.json" "test" "3" "m" [ 3 ];
+    find_row_test
+      "find_row for test_database.json where there is one occurrence \
+       of a value"
+      "test_database.json" "Users" "age" "20" [ 2 ];
+    get_fields_list_test
+      "get_fields_list for Users in test_database.json"
+      "test_database.json" "Users" [ "age"; "fact" ];
+    get_fields_list_test
+      "get_fields_list for test in test_database.json"
+      "test_database.json" "test"
+      [ "1"; "2"; "3"; "4"; "5" ];
+    sum_of_field_test "sum_of_field for 3 in test in test_database.json"
+      "test_database.json" "test" "3" "\"c, h, m\"";
+    sum_of_field_test
+      "sum_of_field for fact in Users in test_database.json"
+      "test_database.json" "Users" "fact"
+      "\"bye, is writing code right now.\"";
+    sum_of_field_test
+      "sum_of_field for age in Users in test_database.json"
+      "test_database.json" "Users" "age" "-30";
+    mean_of_field_test
+      "mean_of_field for age in Users in test_database.json"
+      "test_database.json" "Users" "age" "-15.";
+  ]
+
 let computation_tests =
   [
     sum_of_field_test "sum of int values in computation_database.json"
@@ -488,6 +566,19 @@ let computation_tests =
     mean_of_field_test
       "mean of float values in computation_database.json"
       "computation_database.json" "Types" "float" "13.1";
+    sum_of_field_test
+      "sum of string values in computation_database.json"
+      "computation_database.json" "Types" "string" "\"cs3110,  , \\n\"";
+    sum_of_field_test
+      "sum of string values in computation_database.json"
+      "computation_database.json" "Mismatch" "1"
+      "\"50.5, 0, true, false\"";
+    sum_of_field_test "sum of bool values in computation_database.json"
+      "computation_database.json" "Types" "bool" "true";
+    sum_of_field_test
+      "sum of string values in computation_database.json"
+      "computation_database.json" "Mismatch" "Weird Notation"
+      "\"\\\", '', yes,  \"";
   ]
 
 let exception_tests =
@@ -552,6 +643,65 @@ let exception_tests =
     >:: fun _ ->
       assert_raises (FieldNotFound "4") (fun () ->
           sort_rows "test_database3.json" "test" "4") );
+    ( "mean_of_field for computation_database.json where field is not \
+       int or float"
+    >:: fun _ ->
+      assert_raises
+        (WrongType ("", "bool"))
+        (fun () ->
+          mean_of_field "computation_database.json" "Types" "bool") );
+    ( "mean_of_field for computation_database.json where field is not \
+       int or float"
+    >:: fun _ ->
+      assert_raises
+        (WrongType ("", "string"))
+        (fun () ->
+          mean_of_field "computation_database.json" "Types" "string") );
+    ( "sum_of_field for computation_database.json where field is float \
+       instead of int"
+    >:: fun _ ->
+      assert_raises
+        (WrongType ("", "int"))
+        (fun () ->
+          sum_of_field "computation_database.json" "Mismatch"
+            "Int mismatch") );
+    ( "mean_of_field for computation_database.json where field is \
+       string instead of int"
+    >:: fun _ ->
+      assert_raises
+        (WrongType ("", "int"))
+        (fun () ->
+          mean_of_field "computation_database.json" "Mismatch" "Max/Min")
+    );
+    ( "mean_of_field for test_database.json where field is string \
+       instead of int"
+    >:: fun _ ->
+      assert_raises
+        (WrongType ("", "string"))
+        (fun () -> mean_of_field "test_database.json" "test" "3") );
+    ( "add_row for test_database.json where number of values does not \
+       match the database (no values given)"
+    >:: fun _ ->
+      assert_raises InvalidShape (fun () ->
+          add_row "test_database.json" "Users" []) );
+    ( "add_row for test_database.json where number of values does not \
+       match the database (more values than needed are given)"
+    >:: fun _ ->
+      assert_raises InvalidShape (fun () ->
+          add_row "test_database.json" "test"
+            [ "a"; "b"; "c"; "d"; "e"; "f" ]) );
+    ( "add_row for test_database3.json where number of values does not \
+       match the database (less values than needed are given)"
+    >:: fun _ ->
+      assert_raises InvalidShape (fun () ->
+          add_row "test_database3.json" "test" [ "5"; "-5" ]) );
+    ( "add_row for test_database.json where added value does not match \
+       the field type in field age of Users"
+    >:: fun _ ->
+      assert_raises
+        (WrongType ("hello", "int"))
+        (fun () ->
+          add_row "test_database.json" "Users" [ "hello"; "bye" ]) );
   ]
 
 let suite =
@@ -561,6 +711,7 @@ let suite =
            first_section_tests;
            second_section_tests;
            third_section_tests;
+           fourth_section_tests;
            computation_tests;
            exception_tests;
          ]

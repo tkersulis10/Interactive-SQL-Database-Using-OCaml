@@ -19,9 +19,6 @@ exception DatabaseNotFound of string
 exception InvalidRow of string
 (** Raised when an invalid row is searched for in a database. *)
 
-exception CannotConvertToNum
-(** Raised when trying to convert a string to a number unsuccessfully. *)
-
 exception CannotConvertElement
 (** Raised when trying to convert a string to some element is
     unsuccessful. *)
@@ -34,8 +31,8 @@ exception InvalidShape
     attempts to be added to a database table. *)
 
 exception WrongType of (string * string)
-(**Wrongtype (value) (field_type) is raised when value [value] does not
-   match the type [field_type] of the field it is being added to.*)
+(** [Wrongtype (value, field_type)] is raised when value [value] does
+    not match the type [field_type] of the field it is being added to.*)
 
 val file_location : string
 (** Default file path of main DBMS*)
@@ -133,7 +130,7 @@ val add_field_to_all_rows :
 
 val delete_field : string -> string -> string -> unit
 (** [delete_field file db_name field_name] removes the column with field
-    [field_name] from database [db_name]*)
+    [field_name] from database [db_name]. *)
 
 val find_row : string -> string -> string -> string -> int list
 (** [find_row file database_name field_name value_name] returns the row
@@ -176,12 +173,8 @@ val sort_rows : string -> string -> string -> unit
 
 val sum_of_field : string -> string -> string -> string
 (** [sum_of_field file db_name field_name] gives the sum of all of the
-    numbers with field name [field_name] in [db_name] in [file]. Raises:
-    [CannotConvertToNum] if a value of [field_name] cannot be converted
-    to a number.*)
+    values with field name [field_name] in [db_name] in [file]. *)
 
 val mean_of_field : string -> string -> string -> string
 (** [mean_of_field file db_name field_name] gives the mean of all of the
-    numbers with field name [field_name] in [db_name] in [file]. Raises:
-    [CannotConvertToNum] if a value of [field_name] cannot be converted
-    to a number.*)
+    values with field name [field_name] in [db_name] in [file]. *)

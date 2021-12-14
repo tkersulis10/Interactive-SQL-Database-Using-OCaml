@@ -13,8 +13,6 @@ exception InvalidRow of string
 
 exception InvalidShape
 
-exception CannotConvertToNum
-
 exception CannotConvertElement
 
 exception CannotCompute
@@ -1040,41 +1038,44 @@ let sum_of_field
              String.sub ext_str 1 (String.length ext_str - 2)
            else ext_str)
   in
-  match field_type with
-  | "int" ->
-      string_of_int
-        (List.fold_left
-           (fun acc x ->
-             let num = if String.length x > 0 then x else "0" in
-             acc + int_of_string num)
-           0 value_list)
-  | "bool" ->
-      string_of_bool
-        (List.fold_left
-           (fun acc x ->
-             let bl = if String.length x > 0 then x else "false" in
-             acc || bool_of_string bl)
-           false value_list)
-  | "float" ->
-      string_of_float
-        (List.fold_left
-           (fun acc x ->
-             let num = if String.length x > 0 then x else "0." in
-             acc +. float_of_string num)
-           0. value_list)
-  | _ ->
-      let fin_str =
-        String.trim
+  try
+    match field_type with
+    | "int" ->
+        string_of_int
           (List.fold_left
              (fun acc x ->
-               let str = if String.length x > 0 then x else " " in
-               acc ^ str ^ ", ")
-             "" value_list)
-      in
-      let buf = if String.sub fin_str 0 1 = "," then " " else "" in
-      "\"" ^ buf
-      ^ String.sub fin_str 0 (String.length fin_str - 1)
-      ^ "\""
+               let num = if String.length x > 0 then x else "0" in
+               acc + int_of_string num)
+             0 value_list)
+    | "bool" ->
+        string_of_bool
+          (List.fold_left
+             (fun acc x ->
+               let bl = if String.length x > 0 then x else "false" in
+               acc || bool_of_string bl)
+             false value_list)
+    | "float" ->
+        string_of_float
+          (List.fold_left
+             (fun acc x ->
+               let num = if String.length x > 0 then x else "0." in
+               acc +. float_of_string num)
+             0. value_list)
+    | _ ->
+        let fin_str =
+          String.trim
+            (List.fold_left
+               (fun acc x ->
+                 let str = if String.length x > 0 then x else " " in
+                 acc ^ str ^ ", ")
+               "" value_list)
+        in
+        let buf = if String.sub fin_str 0 1 = "," then " " else "" in
+        "\"" ^ buf
+        ^ String.sub fin_str 0 (String.length fin_str - 1)
+        ^ "\""
+  with
+  | _ -> raise (WrongType ("", field_type))
 
 let mean_of_field
     (file : string)
@@ -1093,21 +1094,24 @@ let mean_of_field
              String.sub ext_str 1 (String.length ext_str - 2)
            else ext_str)
   in
-  match field_type with
-  | "int" ->
-      string_of_float
-        (List.fold_left
-           (fun acc x ->
-             let num = if String.length x > 0 then x else "0" in
-             acc +. float_of_string num)
-           0. value_list
-        /. float_of_int (List.length value_list))
-  | "float" ->
-      string_of_float
-        (List.fold_left
-           (fun acc x ->
-             let num = if String.length x > 0 then x else "0." in
-             acc +. float_of_string num)
-           0. value_list
-        /. float_of_int (List.length value_list))
+  try
+    match field_type with
+    | "int" ->
+        string_of_float
+          (List.fold_left
+             (fun acc x ->
+               let num = if String.length x > 0 then x else "0" in
+               acc +. float_of_string num)
+             0. value_list
+          /. float_of_int (List.length value_list))
+    | "float" ->
+        string_of_float
+          (List.fold_left
+             (fun acc x ->
+               let num = if String.length x > 0 then x else "0." in
+               acc +. float_of_string num)
+             0. value_list
+          /. float_of_int (List.length value_list))
+    | _ -> raise (WrongType ("", field_type))
+  with
   | _ -> raise (WrongType ("", field_type))
