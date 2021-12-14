@@ -162,6 +162,12 @@ let get_fields_types_list (file : string) (db_name : string) =
   |> Yojson.Basic.Util.to_assoc
   |> List.map (fun (x, y) -> (x, Yojson.Basic.to_string y))
 
+(** [get_field_type_help db_name field] returns the type of field
+    [field] in database [db_name]*)
+let get_field_type_help db_name field =
+  let pairs = get_fields_types_list "database.json" db_name in
+  List.assoc field pairs
+
 let get_fields_list (file : string) (db_name : string) =
   let fields_types = get_fields_types_list file db_name in
   List.map (fun (x, y) -> x) fields_types
@@ -251,14 +257,40 @@ let gen_whitespace len =
     in
     gen_aux len ""
 
+(**[gen_horiz_line len upper is_bottom]generates a horizontal line
+   ————...[len] if [upper], ‾‾‾‾...[len] if [is_bottom] or ____...[len]
+   otherwise*)
+let gen_horiz_line len upper is_bottom =
+  let sym = if is_bottom then "‾" else if upper then "—" else "_" in
+  if len <= 0 then ""
+  else
+    let rec gen_aux len acc =
+      if len != 0 then gen_aux (len - 1) (acc ^ sym) else acc
+    in
+    gen_aux len ""
+
+(** [get_row_char_len field_longest_list] combines the the lengths of
+    the longest entries in each field and the lengths of their |
+    separators*)
+let get_row_char_len field_longest_list =
+  let rec row_len_aux field_longest_list sum_acc =
+    match field_longest_list with
+    | (field, longest) :: t -> row_len_aux t (sum_acc + longest + 1)
+    | [] -> sum_acc + 1
+  in
+  row_len_aux field_longest_list 0
+
 (**[get_longest_val field_value_list acc] returns the longest string
    length value in *)
-let get_longest_val rows field =
+let get_longest_val db_name rows field =
   let rec get_lval_aux rows field is_first acc =
     match rows with
     | val_list :: t ->
         let len =
-          if is_first = true then String.length field
+          if is_first = true then
+            String.length field
+            + String.length (get_field_type_help db_name field)
+            + 2
           else
             String.length
               (Yojson.Basic.to_string
@@ -273,11 +305,11 @@ let get_longest_val rows field =
 
 (**[gen_field_longval_pairs rows fields acc] generates a list of (field,
    length of longest value in that field) for all fields in database.*)
-let rec gen_field_longval_pairs rows fields acc =
+let rec gen_field_longval_pairs db_name rows fields acc =
   match fields with
   | field :: t ->
-      gen_field_longval_pairs rows t
-        (acc @ [ (field, get_longest_val rows field) ])
+      gen_field_longval_pairs db_name rows t
+        (acc @ [ (field, get_longest_val db_name rows field) ])
   | [] -> acc
 
 (** [list_vals_rec value_list length_scale_list is_first is_first_sub acc]
@@ -292,33 +324,49 @@ let rec list_vals_rec
   match value_list with
   | (name, value) :: t ->
       if is_first = true then
+        let len =
+          List.assoc name length_scale_list
+          - String.length name
+          - String.length (Yojson.Basic.Util.to_string value)
+          - 2
+        in
+        let left_len = len / 2 in
+        let right_len = len - left_len in
         if is_first_sub = true then
           list_vals_rec t length_scale_list true false
-            (acc ^ "|" ^ name
-            ^ gen_whitespace
-                (List.assoc name length_scale_list - String.length name)
+            (acc ^ "|" ^ gen_whitespace left_len ^ name ^ ": "
+            ^ Yojson.Basic.Util.to_string value
+            ^ gen_whitespace right_len
             ^ "|")
         else
           list_vals_rec t length_scale_list true false
-            (acc ^ name
-            ^ gen_whitespace
-                (List.assoc name length_scale_list - String.length name)
+            (acc ^ gen_whitespace left_len ^ name ^ ": "
+            ^ Yojson.Basic.Util.to_string value
+            ^ gen_whitespace right_len
             ^ "|")
       else if is_first_sub = true then
+        let len =
+          List.assoc name length_scale_list
+          - String.length (Yojson.Basic.Util.to_string value)
+        in
+        let left_len = len / 2 in
+        let right_len = len - left_len in
         list_vals_rec t length_scale_list false false
-          (acc ^ "|"
+          (acc ^ "|" ^ gen_whitespace left_len
           ^ Yojson.Basic.Util.to_string value
-          ^ gen_whitespace
-              (List.assoc name length_scale_list
-              - String.length (Yojson.Basic.Util.to_string value))
+          ^ gen_whitespace right_len
           ^ "|")
       else
+        let len =
+          List.assoc name length_scale_list
+          - String.length (Yojson.Basic.Util.to_string value)
+        in
+        let left_len = len / 2 in
+        let right_len = len - left_len in
         list_vals_rec t length_scale_list false false
-          (acc
+          (acc ^ gen_whitespace left_len
           ^ Yojson.Basic.Util.to_string value
-          ^ gen_whitespace
-              (List.assoc name length_scale_list
-              - String.length (Yojson.Basic.Util.to_string value))
+          ^ gen_whitespace right_len
           ^ "|")
   | [] -> acc
 
@@ -356,15 +404,31 @@ let list_rows (file : string) (database_name : string) =
     find_database file database_name |> Yojson.Basic.Util.to_list
   in
   let length_scalings =
-    gen_field_longval_pairs database_row_list fields_list []
+    gen_field_longval_pairs database_name database_row_list fields_list
+      []
   in
   let header_and_rows =
     list_rows_rec database_row_list fields_list length_scalings true ""
       ""
   in
-  ANSITerminal.print_string [ ANSITerminal.red ] (fst header_and_rows);
-  print_string (snd header_and_rows);
-  print_string "\n"
+  if snd header_and_rows != "" then (
+    ANSITerminal.print_string [ ANSITerminal.red ]
+      (gen_horiz_line (get_row_char_len length_scalings) false false);
+
+    ANSITerminal.print_string [ ANSITerminal.red ] (fst header_and_rows);
+    print_string "\n";
+
+    ANSITerminal.print_string [ ANSITerminal.red ]
+      ("|"
+      ^ gen_horiz_line (get_row_char_len length_scalings - 2) true false
+      ^ "|");
+
+    print_string (snd header_and_rows);
+    print_string "\n";
+    print_string
+      (gen_horiz_line (get_row_char_len length_scalings) true true);
+    print_string "\n")
+  else print_string (fst header_and_rows)
 
 (** [replace_db_in_dbms database_list database_name new_database]
     creates a string representing a json (without the first "{") with
@@ -489,7 +553,9 @@ let add_field_to_all_rows
     (field_name : string)
     (field_type : string) =
   let _ =
-    if value_name != "" then type_check value_name field_type else true
+    if String.length value_name > 0 then
+      type_check value_name field_type
+    else true
   in
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   let database_string =
@@ -516,7 +582,10 @@ let rec update_element_helper
     (field_type : string)
     (new_value : string)
     (updated : bool) =
-  let _ = type_check new_value field_type in
+  let _ =
+    if String.length new_value > 0 then type_check new_value field_type
+    else true
+  in
   match value_list with
   | [] -> if updated then "}" else raise (FieldNotFound field_name)
   | (name, values) :: t ->
@@ -681,6 +750,8 @@ let update_all
     (database_name : string)
     (field_name : string)
     (new_value : string) =
+  let field_type = get_field_type_help database_name field_name in
+  let _ = type_check new_value field_type in
   let database_string =
     find_database file database_name |> Yojson.Basic.to_string
   in
@@ -774,6 +845,79 @@ let add_row (file : string) (db_name : string) (values : string list) =
     in
     write_to_file file (Yojson.Basic.from_string new_str)
 
+let rec pair_list_no_field pairs remove_field changed acc =
+  match pairs with
+  | (name, value) :: t ->
+      if name = remove_field then
+        pair_list_no_field t remove_field true acc
+      else
+        pair_list_no_field t remove_field changed
+          (acc @ [ (name, value) ])
+  | [] ->
+      if changed = false then raise (FieldNotFound remove_field)
+      else acc
+
+let rec delete_from_row row_entries field_name is_first acc =
+  match row_entries with
+  | (name, value) :: t ->
+      if is_first = true then
+        delete_from_row t field_name false acc
+        ^ "\"" ^ name ^ "\"" ^ ": " ^ "\""
+        ^ String.sub
+            (Yojson.Basic.to_string value)
+            1
+            (String.length (Yojson.Basic.to_string value) - 2)
+        ^ "\""
+      else
+        delete_from_row t field_name false acc
+        ^ "\"" ^ name ^ "\"" ^ ": " ^ "\""
+        ^ String.sub
+            (Yojson.Basic.to_string value)
+            1
+            (String.length (Yojson.Basic.to_string value) - 2)
+        ^ "\","
+  | [] -> acc
+
+let delete_field
+    (file : string)
+    (db_name : string)
+    (field_name : string) =
+  let row_list =
+    try
+      dbs_from_file file |> member db_name |> Yojson.Basic.Util.to_list
+      |> List.map Yojson.Basic.Util.to_assoc
+    with
+    | _ -> raise (DatabaseNotFound db_name)
+  in
+  let rec delete_field_aux row_list field_name is_first list_acc =
+    match row_list with
+    | h :: t ->
+        if is_first then
+          delete_field_aux t field_name false
+            (list_acc ^ "{"
+            ^ delete_from_row
+                (List.rev (pair_list_no_field h field_name false []))
+                field_name true ""
+            ^ "}")
+        else
+          delete_field_aux t field_name false
+            (list_acc ^ ", " ^ "{"
+            ^ delete_from_row
+                (List.rev (pair_list_no_field h field_name false []))
+                field_name true ""
+            ^ "}")
+    | [] -> list_acc
+  in
+  let new_db = delete_field_aux row_list field_name true "" in
+  let _ = print_string "" in
+  let string_db = "[" ^ new_db ^ "]" in
+  let db_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
+  let penult_db = replace_db_in_dbms db_list db_name string_db in
+  let final_db =
+    "{" ^ String.sub penult_db 1 (String.length penult_db - 1)
+  in
+  write_to_file file (Yojson.Basic.from_string final_db)
+
 let rec construct_sorted_db row_list pairs header db_acc is_first =
   match pairs with
   | (index, value) :: t ->
@@ -852,120 +996,91 @@ let sort_rows (file : string) (db_name : string) (sort_field : string) =
   in
   write_to_file file (Yojson.Basic.from_string final_db)
 
-(** [sort_field_helper file db_name field_name] creates a string list
-    which is a list of the values with field name [field_name] in
-    database [db_name] in file [file]. *)
-let sort_field_helper
-    (file : string)
-    (db_name : string)
-    (field_name : string) =
-  let rec list_creator entry_list value_name =
-    match entry_list with
-    | h :: t ->
-        let first_string =
-          find_value_helper (Yojson.Basic.Util.to_assoc h) value_name
-        in
-        let final_string =
-          String.sub first_string 1 (String.length first_string - 2)
-        in
-        final_string :: list_creator t value_name
-    | [] -> []
-  in
-  list_creator
-    (Yojson.Basic.Util.to_list (find_database file db_name) |> List.tl)
-    field_name
-
-(** [update_sorted_values file db_name field_name sorted_list sorted_list_ref]
-    updates all of the values with field name [field_name] in [db_name]
-    in [file] to match the order of [sorted_list]. *)
-let update_sorted_values
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (sorted_list : string list) =
-  let sorted_list_ref = ref sorted_list in
-  for i = 1 to List.length sorted_list do
-    update_value file db_name field_name i (List.hd !sorted_list_ref);
-    sorted_list_ref := List.tl !sorted_list_ref
-  done
-
-let sort_field_general
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (element_of_string : string -> 'a)
-    (string_of_element : 'a -> string)
-    (comparison_fun : 'a -> 'a -> int) =
-  let string_list = sort_field_helper file db_name field_name in
-  let element_list =
-    try List.map (fun s -> element_of_string s) string_list with
-    | _ -> raise CannotConvertElement
-  in
-  let sorted_list =
-    try
-      List.sort comparison_fun element_list
-      |> List.map (fun x -> string_of_element x)
-    with
-    | Failure _ -> raise CannotConvertElement
-  in
-  update_sorted_values file db_name field_name sorted_list
-
-(** [id s] returns the string [s]. *)
-let id s : string = s
-
-let sort_field_string
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (comparison_fun : string -> string -> int) =
-  sort_field_general file db_name field_name id id comparison_fun
-
-let sort_field_int
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (comparison_fun : int -> int -> int) =
-  try
-    sort_field_general file db_name field_name int_of_string
-      string_of_int comparison_fun
-  with
-  | CannotConvertElement -> raise CannotConvertToNum
-
-let computation_of_any_field
-    (file : string)
-    (db_name : string)
-    (field_name : string)
-    (element_of_string : string -> 'a)
-    (init : 'a)
-    (computation : 'a -> 'a -> 'a) =
-  let string_list = sort_field_helper file db_name field_name in
-  let element_list =
-    try List.map (fun s -> element_of_string s) string_list with
-    | _ -> raise CannotConvertElement
-  in
-  try
-    List.fold_left (fun acc x -> computation acc x) init element_list
-  with
-  | _ -> raise CannotCompute
-
 let sum_of_field
     (file : string)
     (db_name : string)
     (field_name : string) =
-  try
-    computation_of_any_field file db_name field_name float_of_string 0.
-      (fun acc x -> acc +. x)
-  with
-  | CannotConvertElement -> raise CannotConvertToNum
+  let field_type = get_field_type file db_name field_name in
+  let value_list =
+    dbs_from_file file |> member db_name |> Yojson.Basic.Util.to_list
+    |> List.tl
+    |> List.map Yojson.Basic.Util.to_assoc
+    |> List.map (fun x ->
+           let ext_str =
+             Yojson.Basic.to_string (List.assoc field_name x)
+           in
+           if String.length ext_str > 0 then
+             String.sub ext_str 1 (String.length ext_str - 2)
+           else ext_str)
+  in
+  match field_type with
+  | "int" ->
+      string_of_int
+        (List.fold_left
+           (fun acc x ->
+             let num = if String.length x > 0 then x else "0" in
+             acc + int_of_string num)
+           0 value_list)
+  | "bool" ->
+      string_of_bool
+        (List.fold_left
+           (fun acc x ->
+             let bl = if String.length x > 0 then x else "false" in
+             acc || bool_of_string bl)
+           false value_list)
+  | "float" ->
+      string_of_float
+        (List.fold_left
+           (fun acc x ->
+             let num = if String.length x > 0 then x else "0." in
+             acc +. float_of_string num)
+           0. value_list)
+  | _ ->
+      let fin_str =
+        String.trim
+          (List.fold_left
+             (fun acc x ->
+               let str = if String.length x > 0 then x else " " in
+               acc ^ str ^ ", ")
+             "" value_list)
+      in
+      let buf = if String.sub fin_str 0 1 = "," then " " else "" in
+      "\"" ^ buf
+      ^ String.sub fin_str 0 (String.length fin_str - 1)
+      ^ "\""
 
 let mean_of_field
     (file : string)
     (db_name : string)
     (field_name : string) =
-  let length =
-    List.length (sort_field_helper file db_name field_name)
+  let field_type = get_field_type file db_name field_name in
+  let value_list =
+    dbs_from_file file |> member db_name |> Yojson.Basic.Util.to_list
+    |> List.tl
+    |> List.map Yojson.Basic.Util.to_assoc
+    |> List.map (fun x ->
+           let ext_str =
+             Yojson.Basic.to_string (List.assoc field_name x)
+           in
+           if String.length ext_str > 0 then
+             String.sub ext_str 1 (String.length ext_str - 2)
+           else ext_str)
   in
-  if length > 0 then
-    let total = sum_of_field file db_name field_name in
-    total /. float_of_int length
-  else 0.
+  match field_type with
+  | "int" ->
+      string_of_float
+        (List.fold_left
+           (fun acc x ->
+             let num = if String.length x > 0 then x else "0" in
+             acc +. float_of_string num)
+           0. value_list
+        /. float_of_int (List.length value_list))
+  | "float" ->
+      string_of_float
+        (List.fold_left
+           (fun acc x ->
+             let num = if String.length x > 0 then x else "0." in
+             acc +. float_of_string num)
+           0. value_list
+        /. float_of_int (List.length value_list))
+  | _ -> raise (WrongType ("", field_type))

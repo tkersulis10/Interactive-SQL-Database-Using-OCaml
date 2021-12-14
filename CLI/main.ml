@@ -7,11 +7,14 @@ type command =
   | Create of (string * (string * string) list)
   | Delete of string
   | DeleteRow of (string * string * string)
+  | DeleteField of (string * string)
   | Get of (string * string)
   | List
   | ListFields of string
   | ListRows of string
   | Sort of (string * string)
+  | Sum of (string * string)
+  | Mean of (string * string)
   | Update of (string * string * string * string * string)
   | Help
   | Quit
@@ -35,7 +38,11 @@ let print_help_msg () =
   print_string "are not case sensitive. ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "Arguments ";
   print_string
-    "ARE case sensitive, and are separated by a single space each.\n\n";
+    "ARE case sensitive, and are separated by a single space or comma, \
+     depending on the command.\n\
+    \  Types for fields include: string, int, float, bool.\n\
+    \  Empty values can be created or checked against by typing a \
+     whitespace in place of a value\n\n";
 
   ANSITerminal.print_string [ ANSITerminal.red ] "Command List:\n";
   print_endline "";
@@ -45,17 +52,19 @@ let print_help_msg () =
   print_string "    Syntax: ";
   ANSITerminal.print_string [ ANSITerminal.yellow ] "create table ";
   ANSITerminal.print_string [ ANSITerminal.cyan ]
-    "table_name field_name1 field_name2 field_name3 ";
+    "table_name field_name1 : type1, field_name2 : type2 field_name3 : \
+     type3 ";
   print_string "(for any number of field names > 0)\n\n";
   print_string "    Example: ";
   ANSITerminal.print_string [ ANSITerminal.yellow ] "create table ";
   ANSITerminal.print_string [ ANSITerminal.cyan ]
-    "Users name age fav_color ";
+    "Users name : string, age : int fav_color : string ";
   print_string
     "makes a new database table 'Users',\n\
     \    with column labels 'name', 'age', and 'fav_color'. Each User \
      object later added to\n\
-    \    this table must have values for each of these field names.\n";
+    \    this table must have values for each of these field names, \
+     even if blank, and types must be valid.\n";
   print_endline "";
   (*Delete table help*)
   ANSITerminal.print_string [ ANSITerminal.green ]
@@ -94,7 +103,23 @@ let print_help_msg () =
   print_string "             ";
   ANSITerminal.print_string [ ANSITerminal.yellow ] "delete rows in ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
-  print_string "deletes every row in the databse Users.\n\n";
+  print_string "deletes every row in the database Users.\n\n";
+
+  (*Delete field help*)
+  ANSITerminal.print_string [ ANSITerminal.green ]
+    "  Delete a field from a database table:\n\n";
+  print_string "    Syntax: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "delete field ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "field_name ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "from ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "database_name ";
+  print_string "    Example: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "delete field ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "age ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "from ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
+
+  print_string "remove the entire age column from database Users.\n\n";
 
   (*add row help*)
   ANSITerminal.print_string [ ANSITerminal.green ]
@@ -111,7 +136,8 @@ let print_help_msg () =
   print_string
     "\n\
     \              adds a row [name: Max, age: 20, fact: cs major] to \
-     the database Users (provided it has fields name age and fact)\n\n";
+     the database Users (provided it has fields name age and fact, and \
+     the types of the inputs are valid)\n\n";
   ANSITerminal.print_string [ ANSITerminal.yellow ]
     "              add row to ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "Users Max, , ";
@@ -185,6 +211,64 @@ let print_help_msg () =
   print_string "    Syntax: ";
   ANSITerminal.print_string [ ANSITerminal.yellow ] "list fields ";
   ANSITerminal.print_string [ ANSITerminal.cyan ] "database_name\n\n";
+
+  (*sort help*)
+  ANSITerminal.print_string [ ANSITerminal.green ]
+    "  Sort the rows of a database by a field using standard \
+     comparison, lowest to highest:\n\n";
+  print_string "    Syntax: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "sort ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "database_name ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "by ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "field_name \n\n";
+  print_string "    Examples: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "sort ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "by ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "age ";
+  print_string
+    "sorts the Users database's rows based on an ascending order of \
+     the field age.\n\n";
+
+  (*sum help*)
+  ANSITerminal.print_string [ ANSITerminal.green ]
+    "  Sum the values of a specific database field:\n\n";
+  print_string
+    "    notes: ints & floats are summed normally, strings are \
+     concatenated with commas, and bools are combined with the or \
+     operator.\n\
+    \           Empty values are treated as 0, 0.0, ' ', or false, \
+     respectively.\n\n";
+  print_string "    Syntax: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "sum ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "field_name ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "in ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "database_name \n\n";
+  print_string "    Examples: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "sum ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "age ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "in ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
+  print_string
+    "returns a sum of the ages of all Users in the database.\n\n";
+
+  (*mean help*)
+  ANSITerminal.print_string [ ANSITerminal.green ]
+    "  Get mean value of a specfic database field:\n\n";
+  print_string
+    "    notes: applicable only to fields of type int or float.\n\n";
+  print_string "    Syntax: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "mean of ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "field_name ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "in ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "database_name \n\n";
+  print_string "    Examples: ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "mean of ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "age ";
+  ANSITerminal.print_string [ ANSITerminal.yellow ] "in ";
+  ANSITerminal.print_string [ ANSITerminal.cyan ] "Users ";
+  print_string
+    "returns the mean value of the ages of Users in the database.\n\n";
 
   (*update value help*)
   ANSITerminal.print_string [ ANSITerminal.green ]
@@ -481,6 +565,59 @@ let get_sort_args args =
       | [] -> raise NoArgs)
   | [] -> raise NoArgs
 
+let get_sum_args args =
+  match args with
+  | h :: t -> (
+      let field_name = h in
+      match t with
+      | h :: t ->
+          if h = "in" then
+            match t with
+            | h :: t ->
+                let db_name = h in
+                (field_name, db_name)
+            | [] -> raise NoArgs
+          else raise Malformed
+      | [] -> raise NoArgs)
+  | [] -> raise NoArgs
+
+let get_mean_args args =
+  match args with
+  | h :: t ->
+      if h = "of" then
+        match t with
+        | h :: t -> (
+            let field_name = h in
+            match t with
+            | h :: t ->
+                if h = "in" then
+                  match t with
+                  | h :: t ->
+                      let db_name = h in
+                      (field_name, db_name)
+                  | [] -> raise NoArgs
+                else raise Malformed
+            | [] -> raise NoArgs)
+        | [] -> raise NoArgs
+      else raise Malformed
+  | [] -> raise NoArgs
+
+let get_deletefield_args args =
+  match args with
+  | h :: t -> (
+      let field_name = h in
+      match t with
+      | h :: t ->
+          if h = "from" then
+            match t with
+            | h :: t ->
+                let db_name = h in
+                (field_name, db_name)
+            | [] -> raise NoArgs
+          else raise Malformed
+      | [] -> raise NoArgs)
+  | [] -> raise NoArgs
+
 let cmd_do (cmd : string) (args : string list) =
   match cmd with
   | "addrow" ->
@@ -500,9 +637,12 @@ let cmd_do (cmd : string) (args : string list) =
           if String.length h > 0 then Delete h else raise Malformed
       | [] -> raise NoArgs
     end
+  | "deletefield" -> DeleteField (get_deletefield_args args)
   | "deleterow" -> DeleteRow (get_deleterow_args args)
   | "update" -> Update (get_update_args args)
+  | "mean" -> Mean (get_mean_args args)
   | "sort" -> Sort (get_sort_args args)
+  | "sum" -> Sum (get_sum_args args)
   | "get" -> begin
       match args with
       | h :: t -> get_get_args h t
@@ -522,20 +662,6 @@ let cmd_read cmd lst =
           else raise Malformed
       | [] -> raise Malformed
     end
-  | "list" -> begin
-      match lst with
-      | h :: t ->
-          if String.lowercase_ascii h = "rows" then
-            match t with
-            | h :: t -> ListRows h
-            | [] -> raise NoArgs
-          else if String.lowercase_ascii h = "fields" then
-            match t with
-            | h :: t -> ListFields h
-            | [] -> raise NoArgs
-          else raise Malformed
-      | [] -> List
-    end
   | "create" -> begin
       match lst with
       | h :: t ->
@@ -552,12 +678,30 @@ let cmd_read cmd lst =
             && t != []
             && String.lowercase_ascii (List.hd t) = "in"
           then cmd_do "deleterow" (List.tl t)
+          else if String.lowercase_ascii h = "field" then
+            cmd_do "deletefield" t
           else raise Malformed
       | [] -> raise Malformed
     end
-  | "sort" -> cmd_do "sort" lst
-  | "update" -> cmd_do "update" lst
   | "get" -> cmd_do "get" lst
+  | "list" -> begin
+      match lst with
+      | h :: t ->
+          if String.lowercase_ascii h = "rows" then
+            match t with
+            | h :: t -> ListRows h
+            | [] -> raise NoArgs
+          else if String.lowercase_ascii h = "fields" then
+            match t with
+            | h :: t -> ListFields h
+            | [] -> raise NoArgs
+          else raise Malformed
+      | [] -> List
+    end
+  | "mean" -> cmd_do "mean" lst
+  | "sort" -> cmd_do "sort" lst
+  | "sum" -> cmd_do "sum" lst
+  | "update" -> cmd_do "update" lst
   | "quit" -> Quit
   | _ -> raise Invalid
 
@@ -707,6 +851,22 @@ let main () =
                 ANSITerminal.print_string [ ANSITerminal.red ]
                   "Invalid Decision.\n\n")
       end
+    | DeleteField (field_name, db_name) -> begin
+        match delete_field "database.json" db_name field_name with
+        | exception DatabaseNotFound n ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "database table ";
+            ANSITerminal.print_string [ ANSITerminal.red ] n;
+            print_string " not found.\n\n"
+        | exception FieldNotFound f ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "field name ";
+            ANSITerminal.print_string [ ANSITerminal.red ] field_name;
+            print_string " not found in database.\n\n"
+        | _ ->
+            print_string
+              "\nField successfully removed from database.\n\n"
+      end
     | DeleteRow (db_name, comp_field, comp_val) -> (
         if comp_field = "*" && comp_val = "*" then (
           ANSITerminal.print_string [ ANSITerminal.red ]
@@ -794,10 +954,73 @@ let main () =
                 ("no field " ^ comp_field ^ " exists in database");
               ANSITerminal.print_string [ ANSITerminal.green ] db_name;
               print_string ".\n\n")
+    | Sum (field_name, db_name) -> (
+        match sum_of_field "database.json" db_name field_name with
+        | exception DatabaseNotFound dbn ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "no database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] dbn;
+            print_string " exists.\n\n"
+        | exception e ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "no field ";
+            ANSITerminal.print_string [ ANSITerminal.red ] field_name;
+            print_string " exists in that database.\n\n"
+        | _ ->
+            print_string "\nSum of field ";
+            ANSITerminal.print_string [ ANSITerminal.green ] field_name;
+            print_string
+              (" is "
+              ^ sum_of_field "database.json" db_name field_name
+              ^ "\n\n"))
+    | Mean (field_name, db_name) -> (
+        match mean_of_field "database.json" db_name field_name with
+        | exception DatabaseNotFound dbn ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "no database ";
+            ANSITerminal.print_string [ ANSITerminal.red ] dbn;
+            print_string " exists.\n\n"
+        | exception WrongType (v, f) ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "cannot take a mean of values of type ";
+            ANSITerminal.print_string [ ANSITerminal.red ]
+              (get_field_type "database.json" db_name field_name);
+            print_string "\n\n"
+        | exception e ->
+            ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+            print_string "no field ";
+            ANSITerminal.print_string [ ANSITerminal.red ] field_name;
+            print_string " exists in that database.\n\n"
+        | _ ->
+            print_string "\nMean of field ";
+            ANSITerminal.print_string [ ANSITerminal.green ] field_name;
+            print_string
+              (" is "
+              ^ mean_of_field "database.json" db_name field_name
+              ^ "\n\n"))
     | Update (db_name, field_name, new_val, comp_field, comp_val) -> (
-        if comp_field = "*" && comp_val = "*" then (
-          update_all "database.json" db_name field_name new_val;
-          print_string "\nAll values of database updated\n\n")
+        if comp_field = "*" && comp_val = "*" then
+          match
+            update_all "database.json" db_name field_name new_val
+          with
+          | exception WrongType (value, fieldtype) ->
+              ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+              print_string "value ";
+              ANSITerminal.print_string [ ANSITerminal.red ] value;
+              print_string " cannot be assigned to field with type ";
+              ANSITerminal.print_string [ ANSITerminal.green ] fieldtype;
+              print_string "\n\n"
+          | exception DatabaseNotFound n ->
+              ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+              print_string "database ";
+              ANSITerminal.print_string [ ANSITerminal.red ] db_name;
+              print_string " not found.\n\n"
+          | exception FieldNotFound n ->
+              ANSITerminal.print_string [ ANSITerminal.red ] "\nError: ";
+              print_string "field ";
+              ANSITerminal.print_string [ ANSITerminal.red ] field_name;
+              print_string " not found.\n\n"
+          | _ -> print_string "\nAll values of database updated\n\n"
         else
           match
             find_row "database.json" db_name comp_field comp_val
