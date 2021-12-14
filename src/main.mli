@@ -1,3 +1,8 @@
+(** Database SQL Functions.
+
+    This module contains all of the SQL functions used to manipulate and
+    extract data from a database. *)
+
 type db_list
 (** Json list representation of a set of databases. *)
 

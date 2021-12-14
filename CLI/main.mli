@@ -1,3 +1,7 @@
+(** Representation of a command line.
+
+    This module contains all of the functions to work the command line. *)
+
 type command
 (** The representation of a command. *)
 
