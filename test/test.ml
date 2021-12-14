@@ -150,31 +150,21 @@ let get_db_names_list_test
     (get_db_names_list input)
     ~printer:identity
 
-(** [list_rows_test name file database_name expected_output] creates an
-    OUnit test with name [name] that compares whether
-    [list_rows file database_name] is equal to [expected_output]. *)
-let list_rows_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (expected_output : string) =
-  name >:: fun _ ->
-  assert_equal expected_output
-    (list_rows file database_name)
-    ~printer:identity
-
-(** [add_field_to_all_rows_test name file database_name value_name expected_output]
+(** [add_field_to_all_rows_test name file database_name field_name field_type expected_output]
     creates an OUnit test with name [name] that compares whether
     [file |> dbs_from_file |> Yojson.Basic.Util.to_string] is equal to
     [expected_output] after calling
-    [add_field_to_all_rows file database_name value_name]. *)
+    [add_field_to_all_rows file database_name field_name field_type]. *)
 let add_field_to_all_rows_test
     (name : string)
     (file : string)
     (database_name : string)
-    (value_name : string)
+    (field_name : string)
+    (field_type : string)
     (expected_output : string) =
-  let _ = add_field_to_all_rows file database_name value_name in
+  let _ =
+    add_field_to_all_rows file database_name field_name field_type
+  in
   name >:: fun _ ->
   assert_equal expected_output
     (file |> dbs_from_file |> Yojson.Basic.to_string)
@@ -225,11 +215,11 @@ let sum_of_field_test
     (file : string)
     (database_name : string)
     (field_name : string)
-    (expected_output : float) =
+    (expected_output : string) =
   name >:: fun _ ->
   assert_equal expected_output
     (sum_of_field file database_name field_name)
-    ~printer:string_of_float
+    ~printer:identity
 
 (** [mean_of_field_test name file database_name field_name expected_output]
     creates an OUnit test with name [name] that compares whether
@@ -240,29 +230,11 @@ let mean_of_field_test
     (file : string)
     (database_name : string)
     (field_name : string)
-    (expected_output : float) =
+    (expected_output : string) =
   name >:: fun _ ->
   assert_equal expected_output
     (mean_of_field file database_name field_name)
-    ~printer:string_of_float
-
-(** [computation_of_any_field_test name file database_name field_name element_of_string init computation expected_output]
-    creates an OUnit test with name [name] that compares whether
-    [computation_of_any_field file database_name field_name element_of_string init computation]
-    is equal to [expected_output]. *)
-let computation_of_any_field_test
-    (name : string)
-    (file : string)
-    (database_name : string)
-    (field_name : string)
-    (element_of_string : string -> 'a)
-    (init : 'a)
-    (computation : 'a -> 'a -> 'a)
-    (expected_output : 'a) =
-  name >:: fun _ ->
-  assert_equal expected_output
-    (computation_of_any_field file database_name field_name
-       element_of_string init computation)
+    ~printer:identity
 
 (** [update_file_test name file expected_output] creates an OUnit test
     with name [name] that compares whether
@@ -280,13 +252,26 @@ let update_file_test
 let first_section_tests =
   let _ = write_to_file "empty_database.json" test_database_1 in
   let _ = delete_database "empty_database.json" "Users" in
-  let _ = clear_database "empty_database.json" "test" in
+  let _ = delete_database "empty_database.json" "test" in
   let _ =
-    add_database "empty_database.json" "Cornell"
-      [ "Engineering"; "CALS"; "A&S" ]
+    add_database "empty_database.json" "test"
+      [
+        ("1", "string");
+        ("2", "string");
+        ("3", "string");
+        ("4", "string");
+        ("5", "string");
+      ]
   in
   let _ =
-    add_database "empty_database.json" "Users" [ "Tomas"; "Max" ]
+    add_database "empty_database.json" "Cornell"
+      [
+        ("Engineering", "string"); ("CALS", "string"); ("A&S", "string");
+      ]
+  in
+  let _ =
+    add_database "empty_database.json" "Users"
+      [ ("Tomas", "string"); ("Max", "string") ]
   in
   let _ =
     add_element_to_database "empty_database.json" "Cornell" "Hotel"
@@ -297,27 +282,26 @@ let first_section_tests =
        add_database, and add_element_to_database in  \
        empty_database.json"
       "empty_database.json"
-      "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
+      "{\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"}],\"Cornell\":[{\"Engineering\":\"string\",\"CALS\":\"string\",\"A&S\":\"string\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"string\",\"Max\":\"string\"}]}";
     database_string_test "database_string for empty_database.json"
       "empty_database.json"
-      "{\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}]}";
+      "{\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"}],\"Cornell\":[{\"Engineering\":\"string\",\"CALS\":\"string\",\"A&S\":\"string\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"string\",\"Max\":\"string\"}]}";
     splice_outer_parens_test
       "splice_outer_parens_test for empty_database.json"
       "empty_database.json"
-      "\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}],\"Cornell\":[{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"\",\"Max\":\"\"}],";
+      "\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"}],\"Cornell\":[{\"Engineering\":\"string\",\"CALS\":\"string\",\"A&S\":\"string\",\"Hotel\":\"\"}],\"Users\":[{\"Tomas\":\"string\",\"Max\":\"string\"}],";
     find_database_test "find_database for empty_database.json"
       "empty_database.json" "Cornell"
-      "{\"Engineering\":\"\",\"CALS\":\"\",\"A&S\":\"\",\"Hotel\":\"\"}";
+      "{\"Engineering\":\"string\",\"CALS\":\"string\",\"A&S\":\"string\",\"Hotel\":\"\"}";
     find_database_test "find_database for empty_database.json"
-      "empty_database.json" "Users" "{\"Tomas\":\"\",\"Max\":\"\"}";
+      "empty_database.json" "Users"
+      "{\"Tomas\":\"string\",\"Max\":\"string\"}";
     find_value_in_database_test
       "find_value_in_database for empty_database.json"
       "empty_database.json" "Users" "Tomas"
       "\n  - No results found. Database is empty.";
     get_db_names_list_test "get_db_names for empty_database.json"
       "empty_database.json" "  -  test\n  -  Cornell\n  -  Users\n\n";
-    list_rows_test "list_rows for empty_database.json"
-      "empty_database.json" "Cornell" "\n - Database is empty.\n\n";
     get_fields_list_test "get_fields_list for empty_database.json"
       "empty_database.json" "test"
       [ "1"; "2"; "3"; "4"; "5" ];
@@ -331,45 +315,47 @@ let second_section_tests =
     update_all "test_database2.json" "Users" "fact" "CS 3110 is fun."
   in
   let _ = update_value "test_database2.json" "test" "2" 1 "zero, 0" in
-  let _ = add_field_to_all_rows "test_database2.json" "Users" "Idea" in
+  let _ =
+    add_field_to_all_rows "test_database2.json" "Users" "Idea" "string"
+  in
   [
     update_file_test
       "tests update_all, update_element, and add_field_to_all_rows in \
        test_database2.json"
       "test_database2.json"
-      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
+      "{\"Users\":[{\"name\":\"string\",\"age\":\"string\",\"fact\":\"string\",\"Idea\":\"string\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
        3110 is \
        fun.\",\"Idea\":\"\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS \
        3110 is \
-       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"zero, \
+       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"},{\"1\":\"a\",\"2\":\"zero, \
        0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}]}";
     database_string_test "database_string for test_database2.json"
       "test_database2.json"
-      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
+      "{\"Users\":[{\"name\":\"string\",\"age\":\"string\",\"fact\":\"string\",\"Idea\":\"string\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
        3110 is \
        fun.\",\"Idea\":\"\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS \
        3110 is \
-       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"zero, \
+       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"},{\"1\":\"a\",\"2\":\"zero, \
        0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}]}";
     splice_outer_parens_test
       "splice_outer_parens_test for test_database2.json"
       "test_database2.json"
-      "\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
+      "\"Users\":[{\"name\":\"string\",\"age\":\"string\",\"fact\":\"string\",\"Idea\":\"string\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS \
        3110 is \
        fun.\",\"Idea\":\"\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS \
        3110 is \
-       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"},{\"1\":\"a\",\"2\":\"zero, \
+       fun.\",\"Idea\":\"\"}],\"test\":[{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"},{\"1\":\"a\",\"2\":\"zero, \
        0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}],";
     find_database_test "find_database for test_database2.json"
       "test_database2.json" "Users"
-      "{\"name\":\"\",\"age\":\"\",\"fact\":\"\",\"Idea\":\"\"}, \
+      "{\"name\":\"string\",\"age\":\"string\",\"fact\":\"string\",\"Idea\":\"string\"}, \
        {\"name\":\"Max\",\"age\":\"20\",\"fact\":\"CS 3110 is \
        fun.\",\"Idea\":\"\"}, \
        {\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"CS 3110 is \
        fun.\",\"Idea\":\"\"}";
     find_database_test "find_database for test_database2.json"
       "test_database2.json" "test"
-      "{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"4\":\"\",\"5\":\"\"}, \
+      "{\"1\":\"string\",\"2\":\"string\",\"3\":\"string\",\"4\":\"string\",\"5\":\"string\"}, \
        {\"1\":\"a\",\"2\":\"zero, \
        0\",\"3\":\"c\",\"4\":\"d\",\"5\":\"e\"}";
     find_value_in_database_test
@@ -380,14 +366,6 @@ let second_section_tests =
       "test_database2.json" "test" "5" "\n\"e\"";
     get_db_names_list_test "get_db_names for test_database2.json"
       "test_database2.json" "  -  Users\n  -  test\n\n";
-    list_rows_test "list_rows for test_database2.json"
-      "test_database2.json" "Users"
-      "(name: Max),  (age: 20),  (fact: CS 3110 is fun.),  (Idea: )\n\
-       (name: Cthulu),  (age: infinite),  (fact: CS 3110 is fun.),  \
-       (Idea: )\n\n";
-    list_rows_test "list_rows for test_database2.json"
-      "test_database2.json" "test"
-      "(1: a),  (2: zero, 0),  (3: c),  (4: d),  (5: e)\n\n";
     find_row_test
       "find_row for test_database2.json where there are multiple \
        occurences of a value"
@@ -403,73 +381,54 @@ let second_section_tests =
     get_fields_list_test "get_fields_list for test_database2.json"
       "test_database2.json" "Users"
       [ "name"; "age"; "fact"; "Idea" ];
-    computation_of_any_field_test
-      "computation_of_any_field with concatenation of strings with \
-       field name fact in test_database2.json"
-      "test_database2.json" "Users" "fact" identity "hello" ( ^ )
-      "helloCS 3110 is fun.CS 3110 is fun.";
-    computation_of_any_field_test
-      "computation_of_any_field with only one string with that field \
-       name in test_database2.json"
-      "test_database2.json" "test" "2" identity "HI"
-      (fun acc s -> acc ^ s ^ "BYE")
-      "HIzero, 0BYE";
   ]
 
 let third_section_tests =
-  let _ =
-    sort_field_string "test_database3.json" "Users" "fact" compare
-  in
-  let _ = sort_field_int "test_database3.json" "test" "3" compare in
-  let _ =
-    sort_field_general "test_database3.json" "Users" "age" identity
-      identity compare
-  in
-  let _ =
-    sort_field_general "test_database3.json" "test" "2" int_of_string
-      string_of_int compare
-  in
+  let _ = sort_rows "test_database3.json" "Users" "fact" in
+  let _ = sort_rows "test_database3.json" "test" "3" in
+  let _ = sort_rows "test_database3.json" "Users" "age" in
+  let _ = sort_rows "test_database3.json" "test" "2" in
   [
     update_file_test
       "tests sort_field_string, sort_field_int, and sort_field_general \
        in test_database3.json"
       "test_database3.json"
-      "{\"Users\":[{\"name\":\"\",\"age\":\"\",\"fact\":\"\"},{\"name\":\"Max\",\"age\":\"1\",\"fact\":\"is \
-       computer\"},{\"name\":\"Cthulu\",\"age\":\"20\",\"fact\":\"is \
-       the bringer of \
-       chaos.\"},{\"name\":\"cli\",\"age\":\"infinite\",\"fact\":\"is \
+      "{\"Users\":[{\"name\":\"string\",\"age\":\"string\",\"fact\":\"string\"},{\"name\":\"cli\",\"age\":\"1\",\"fact\":\"is \
+       computer\"},{\"name\":\"Max\",\"age\":\"20\",\"fact\":\"is \
        writing code right \
-       now.\"}],\"test\":[{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"tvalue\":\"\",\"opval\":\"\"},{\"1\":\"l \
+       now.\"},{\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"is \
+       the bringer of \
+       chaos.\"}],\"test\":[{\"1\":\"string\",\"2\":\"int\",\"3\":\"int\",\"tvalue\":\"string\",\"opval\":\"string\"},{\"1\":\"1 \
+       1\",\"2\":\"-1239999\",\"3\":\"-43\",\"tvalue\":\"\",\"opval\":\"yay\"},{\"1\":\"l \
        o \
-       l\",\"2\":\"-1239999\",\"3\":\"-43\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"l \
+       l\",\"2\":\"-23423\",\"3\":\"5\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"l \
        o \
-       l\",\"2\":\"-23423\",\"3\":\"3\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"l \
+       l\",\"2\":\"0\",\"3\":\"3\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"l \
        o \
-       l\",\"2\":\"0\",\"3\":\"5\",\"tvalue\":\"\",\"opval\":\"nay\"},{\"1\":\"1 \
-       1\",\"2\":\"73\",\"3\":\"33\",\"tvalue\":\"\",\"opval\":\"yay\"}]}";
+       l\",\"2\":\"73\",\"3\":\"33\",\"tvalue\":\"\",\"opval\":\"nay\"}]}";
     find_database_test "find_database for test_database3.json"
       "test_database3.json" "Users"
-      "{\"name\":\"\",\"age\":\"\",\"fact\":\"\"}, \
-       {\"name\":\"Max\",\"age\":\"1\",\"fact\":\"is computer\"}, \
-       {\"name\":\"Cthulu\",\"age\":\"20\",\"fact\":\"is the bringer \
-       of chaos.\"}, \
-       {\"name\":\"cli\",\"age\":\"infinite\",\"fact\":\"is writing \
-       code right now.\"}";
+      "{\"name\":\"string\",\"age\":\"string\",\"fact\":\"string\"}, \
+       {\"name\":\"cli\",\"age\":\"1\",\"fact\":\"is computer\"}, \
+       {\"name\":\"Max\",\"age\":\"20\",\"fact\":\"is writing code \
+       right now.\"}, \
+       {\"name\":\"Cthulu\",\"age\":\"infinite\",\"fact\":\"is the \
+       bringer of chaos.\"}";
     find_database_test "find_database for test_database3.json"
       "test_database3.json" "test"
-      "{\"1\":\"\",\"2\":\"\",\"3\":\"\",\"tvalue\":\"\",\"opval\":\"\"}, \
-       {\"1\":\"l o \
-       l\",\"2\":\"-1239999\",\"3\":\"-43\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
-       {\"1\":\"l o \
-       l\",\"2\":\"-23423\",\"3\":\"3\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
-       {\"1\":\"l o \
-       l\",\"2\":\"0\",\"3\":\"5\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
+      "{\"1\":\"string\",\"2\":\"int\",\"3\":\"int\",\"tvalue\":\"string\",\"opval\":\"string\"}, \
        {\"1\":\"1 \
-       1\",\"2\":\"73\",\"3\":\"33\",\"tvalue\":\"\",\"opval\":\"yay\"}";
+       1\",\"2\":\"-1239999\",\"3\":\"-43\",\"tvalue\":\"\",\"opval\":\"yay\"}, \
+       {\"1\":\"l o \
+       l\",\"2\":\"-23423\",\"3\":\"5\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
+       {\"1\":\"l o \
+       l\",\"2\":\"0\",\"3\":\"3\",\"tvalue\":\"\",\"opval\":\"nay\"}, \
+       {\"1\":\"l o \
+       l\",\"2\":\"73\",\"3\":\"33\",\"tvalue\":\"\",\"opval\":\"nay\"}";
     find_value_in_database_test
       "find_value_in_database for test_database3.json"
       "test_database3.json" "Users" "name"
-      "\n\"Max\", \"Cthulu\", \"cli\"";
+      "\n\"cli\", \"Max\", \"Cthulu\"";
     find_value_in_database_test
       "find_value_in_database for test_database3.json"
       "test_database3.json" "Users" "age"
@@ -478,42 +437,30 @@ let third_section_tests =
       "find_value_in_database for test_database3.json"
       "test_database3.json" "Users" "fact"
       "\n\
-       \"is computer\", \"is the bringer of chaos.\", \"is writing \
-       code right now.\"";
+       \"is computer\", \"is writing code right now.\", \"is the \
+       bringer of chaos.\"";
     find_value_in_database_test
       "find_value_in_database for test_database3.json"
       "test_database3.json" "test" "2"
       "\n\"-1239999\", \"-23423\", \"0\", \"73\"";
     find_value_in_database_test
       "find_value_in_database for test_database3.json"
-      "test_database3.json" "test" "3" "\n\"-43\", \"3\", \"5\", \"33\"";
+      "test_database3.json" "test" "3" "\n\"-43\", \"5\", \"3\", \"33\"";
     get_db_names_list_test "get_db_names for test_database3.json"
       "test_database3.json" "  -  Users\n  -  test\n\n";
-    list_rows_test "list_rows for Users in test_database3.json"
-      "test_database3.json" "Users"
-      "(name: Max),  (age: 1),  (fact: is computer)\n\
-       (name: Cthulu),  (age: 20),  (fact: is the bringer of chaos.)\n\
-       (name: cli),  (age: infinite),  (fact: is writing code right \
-       now.)\n\n";
-    list_rows_test "list_rows for test in test_database3.json"
-      "test_database3.json" "test"
-      "(1: l o l),  (2: -1239999),  (3: -43),  (tvalue: ),  (opval: nay)\n\
-       (1: l o l),  (2: -23423),  (3: 3),  (tvalue: ),  (opval: nay)\n\
-       (1: l o l),  (2: 0),  (3: 5),  (tvalue: ),  (opval: nay)\n\
-       (1: 1 1),  (2: 73),  (3: 33),  (tvalue: ),  (opval: yay)\n\n";
     find_row_test
       "find_row for test_database3.json where there are multiple \
        occurences of a value"
-      "test_database3.json" "test" "opval" "nay" [ 1; 2; 3 ];
+      "test_database3.json" "test" "opval" "nay" [ 2; 3; 4 ];
     find_row_test
       "find_row for test_database3.json where there is one occurrence \
        of a value"
-      "test_database3.json" "test" "opval" "yay" [ 4 ];
+      "test_database3.json" "test" "opval" "yay" [ 1 ];
     find_row_test
       "find_row for test_database3.json where there is one occurrence \
        of a value"
       "test_database3.json" "Users" "fact" "is writing code right now."
-      [ 3 ];
+      [ 2 ];
     get_fields_list_test
       "get_fields_list for Users in test_database3.json"
       "test_database3.json" "Users"
@@ -524,49 +471,23 @@ let third_section_tests =
       [ "1"; "2"; "3"; "tvalue"; "opval" ];
     sum_of_field_test
       "sum_of_field for 3 in test in test_database3.json"
-      "test_database3.json" "test" "3" (-2.);
+      "test_database3.json" "test" "3" "-2";
     mean_of_field_test
       "mean_of_field for 3 in test in test_database3.json"
-      "test_database3.json" "test" "3" (-0.5);
-    computation_of_any_field_test
-      "computation_of_any_field for 2 in test in test_database3.json"
-      "test_database3.json" "test" "2" int_of_string 0 ( + ) (-1263349);
+      "test_database3.json" "test" "3" "-0.5";
   ]
 
 let computation_tests =
   [
     sum_of_field_test "sum of int values in computation_database.json"
-      "computation_database.json" "Types" "int" (-47.0);
+      "computation_database.json" "Types" "int" "-47";
     mean_of_field_test "mean of int values in computation_database.json"
-      "computation_database.json" "Types" "int" (-15.6666666666666661);
+      "computation_database.json" "Types" "int" "-15.6666666667";
     sum_of_field_test "sum of float values in computation_database.json"
-      "computation_database.json" "Types" "float" 39.3;
+      "computation_database.json" "Types" "float" "39.3";
     mean_of_field_test
       "mean of float values in computation_database.json"
-      "computation_database.json" "Types" "float" 13.1;
-    computation_of_any_field_test
-      "concatenation of string values in computation_database.json"
-      "computation_database.json" "Types" "string" identity "" ( ^ )
-      "cs3110\\n";
-    computation_of_any_field_test
-      "and concatenation of bool values in computation_database.json"
-      "computation_database.json" "Types" "bool" bool_of_string true
-      ( && ) false;
-    computation_of_any_field_test
-      "or concatenation of bool values in computation_database.json"
-      "computation_database.json" "Types" "bool" bool_of_string false
-      ( || ) true;
-    computation_of_any_field_test
-      "multiplication of of int values in computation_database.json"
-      "computation_database.json" "Types" "int" int_of_string 1 ( * )
-      (-1965600);
-    computation_of_any_field_test
-      "concatenation with extra effects of boundary string values in \
-       computation_database.json"
-      "computation_database.json" "Mismatch" "Weird Notation" identity
-      "START"
-      (fun acc s -> acc ^ "; " ^ s ^ "; ")
-      "START; \\\"; ; ''; ; yes; ; ; ";
+      "computation_database.json" "Types" "float" "13.1";
   ]
 
 let exception_tests =
@@ -626,46 +547,11 @@ let exception_tests =
        file"
     >:: fun _ ->
       assert_raises (DatabaseNotFound "users") (fun () ->
-          sort_field_string "test_database3.json" "users" "age" compare)
-    );
+          sort_rows "test_database3.json" "users" "age") );
     ( "sort_field_int for test_database3.json where field is not file"
     >:: fun _ ->
-      assert_raises (ValNotFound "4") (fun () ->
-          sort_field_int "test_database3.json" "test" "4" compare) );
-    ( "sort_field_int for test_database3.json where string cannot be \
-       converted to int"
-    >:: fun _ ->
-      assert_raises CannotConvertToNum (fun () ->
-          sort_field_int "test_database3.json" "Users" "age" compare) );
-    ( "sort_field_general for test_database3.json where converting \
-       function does not do a good job of converting"
-    >:: fun _ ->
-      assert_raises CannotConvertElement (fun () ->
-          sort_field_general "test_database3.json" "test" "2"
-            bool_of_string string_of_bool compare) );
-    ( "sum_of_field for computation_database.json where values cannot \
-       be converted to floats"
-    >:: fun _ ->
-      assert_raises CannotConvertToNum (fun () ->
-          sum_of_field "computation_database.json" "Mismatch" "1") );
-    ( "mean_of_field for computation_database.json where values cannot \
-       be converted to floats"
-    >:: fun _ ->
-      assert_raises CannotConvertToNum (fun () ->
-          mean_of_field "computation_database.json" "Mismatch" "1") );
-    ( "computation_of_any_field for computation_database.json where \
-       values cannot be converted to integers"
-    >:: fun _ ->
-      assert_raises CannotConvertElement (fun () ->
-          computation_of_any_field "computation_database.json"
-            "Mismatch" "Int mismatch" int_of_string 0 ( + )) );
-    ( "computation_of_any_field for computation_database.json where \
-       values cannot be converted to integers even though they may \
-       look like they should"
-    >:: fun _ ->
-      assert_raises CannotConvertElement (fun () ->
-          computation_of_any_field "computation_database.json"
-            "Mismatch" "Max/Min" int_of_string 0 ( + )) );
+      assert_raises (FieldNotFound "4") (fun () ->
+          sort_rows "test_database3.json" "test" "4") );
   ]
 
 let suite =

@@ -154,6 +154,8 @@ let rec find_database (file : string) (database_name : string) =
   let database_list = Yojson.Basic.Util.to_assoc (dbs_from_file file) in
   find_database_helper database_name database_list
 
+(** [get_fields_types_list file db_name] returns the list of fields and
+    their types in [db_name] in [file]. *)
 let get_fields_types_list (file : string) (db_name : string) =
   let database_row_list =
     find_database file db_name |> Yojson.Basic.Util.to_list
@@ -164,10 +166,12 @@ let get_fields_types_list (file : string) (db_name : string) =
 
 (** [get_field_type_help db_name field] returns the type of field
     [field] in database [db_name]*)
-let get_field_type_help db_name field =
-  let pairs = get_fields_types_list "database.json" db_name in
+let get_field_type_help file db_name field =
+  let pairs = get_fields_types_list file db_name in
   List.assoc field pairs
 
+(** [get_fields_list file db_name] returns the fields of [db_name] in
+    [file]. *)
 let get_fields_list (file : string) (db_name : string) =
   let fields_types = get_fields_types_list file db_name in
   List.map (fun (x, y) -> x) fields_types
@@ -257,9 +261,9 @@ let gen_whitespace len =
     in
     gen_aux len ""
 
-(**[gen_horiz_line len upper is_bottom]generates a horizontal line
-   ————...[len] if [upper], ‾‾‾‾...[len] if [is_bottom] or ____...[len]
-   otherwise*)
+(** [gen_horiz_line len upper is_bottom]generates a horizontal line
+    ————...[len] if [upper], ‾‾‾‾...[len] if [is_bottom] or ____...[len]
+    otherwise. *)
 let gen_horiz_line len upper is_bottom =
   let sym = if is_bottom then "‾" else if upper then "—" else "_" in
   if len <= 0 then ""
@@ -282,14 +286,14 @@ let get_row_char_len field_longest_list =
 
 (**[get_longest_val field_value_list acc] returns the longest string
    length value in *)
-let get_longest_val db_name rows field =
+let get_longest_val file db_name rows field =
   let rec get_lval_aux rows field is_first acc =
     match rows with
     | val_list :: t ->
         let len =
           if is_first = true then
             String.length field
-            + String.length (get_field_type_help db_name field)
+            + String.length (get_field_type_help file db_name field)
             + 2
           else
             String.length
@@ -305,11 +309,11 @@ let get_longest_val db_name rows field =
 
 (**[gen_field_longval_pairs rows fields acc] generates a list of (field,
    length of longest value in that field) for all fields in database.*)
-let rec gen_field_longval_pairs db_name rows fields acc =
+let rec gen_field_longval_pairs file db_name rows fields acc =
   match fields with
   | field :: t ->
-      gen_field_longval_pairs db_name rows t
-        (acc @ [ (field, get_longest_val db_name rows field) ])
+      gen_field_longval_pairs file db_name rows t
+        (acc @ [ (field, get_longest_val file db_name rows field) ])
   | [] -> acc
 
 (** [list_vals_rec value_list length_scale_list is_first is_first_sub acc]
@@ -404,8 +408,8 @@ let list_rows (file : string) (database_name : string) =
     find_database file database_name |> Yojson.Basic.Util.to_list
   in
   let length_scalings =
-    gen_field_longval_pairs database_name database_row_list fields_list
-      []
+    gen_field_longval_pairs file database_name database_row_list
+      fields_list []
   in
   let header_and_rows =
     list_rows_rec database_row_list fields_list length_scalings true ""
@@ -519,30 +523,36 @@ let get_field_type
   in
   String.sub field_type_quotes 1 (String.length field_type_quotes - 2)
 
-(**[type_check value field_type] checks whether [value] is of type
-   [field_type], returning true if so, and a WrongType exception if not.*)
+(** [type_check value field_type] checks whether [value] is of type
+    [field_type], returning true if so, and a WrongType exception if
+    not. *)
 let type_check (value : string) (field_type : string) =
   if value != "" then
     match field_type with
-    | "int" -> (
+    | "int"
+    | "\"int\"" -> (
         try
           let _ = int_of_string value in
           true
         with
         | _ -> raise (WrongType (value, field_type)))
-    | "bool" ->
+    | "bool"
+    | "\"bool\"" ->
         if
           String.lowercase_ascii value = "true"
           || String.lowercase_ascii value = "false"
         then true
         else raise (WrongType (value, field_type))
-    | "float" -> (
+    | "float"
+    | "\"float\"" -> (
         try
           let _ = float_of_string value in
           true
         with
         | _ -> raise (WrongType (value, field_type)))
-    | "string" -> true
+    | "string"
+    | "\"string\"" ->
+        true
     | _ -> raise (WrongType (value, field_type))
   else true
 
@@ -750,7 +760,7 @@ let update_all
     (database_name : string)
     (field_name : string)
     (new_value : string) =
-  let field_type = get_field_type_help database_name field_name in
+  let field_type = get_field_type_help file database_name field_name in
   let _ = type_check new_value field_type in
   let database_string =
     find_database file database_name |> Yojson.Basic.to_string
@@ -802,7 +812,11 @@ let rec delete_rows_in_database
   in
   write_to_file file (Yojson.Basic.from_string new_str)
 
+(** [create_row file field_val_pairs db_name] creates a string
+    representation of a row that contains [field_val_pairs] in
+    [db_name]. *)
 let rec create_row
+    file
     (field_val_pairs : (string * string) list)
     (db_name : string) =
   match field_val_pairs with
@@ -810,15 +824,17 @@ let rec create_row
       let _ =
         if String.length (String.trim value) != 0 then
           type_check (String.trim value)
-            (get_field_type "database.json" db_name field)
+            (get_field_type file db_name field)
         else true
       in
       if t = [] then
         "\"" ^ String.trim field ^ "\"" ^ ": " ^ "\""
-        ^ String.trim value ^ "\"" ^ create_row t db_name
+        ^ String.trim value ^ "\""
+        ^ create_row file t db_name
       else
         "\"" ^ String.trim field ^ "\"" ^ ": " ^ "\""
-        ^ String.trim value ^ "\"" ^ "," ^ create_row t db_name
+        ^ String.trim value ^ "\"" ^ ","
+        ^ create_row file t db_name
   | [] -> "}]"
 
 let add_row (file : string) (db_name : string) (values : string list) =
@@ -835,7 +851,7 @@ let add_row (file : string) (db_name : string) (values : string list) =
   else
     let updated_db =
       trimmed ^ ",{"
-      ^ create_row (List.combine field_names values) db_name
+      ^ create_row file (List.combine field_names values) db_name
     in
     let new_str =
       let after_helper =
@@ -845,6 +861,9 @@ let add_row (file : string) (db_name : string) (values : string list) =
     in
     write_to_file file (Yojson.Basic.from_string new_str)
 
+(** [pair_list_no_field pairs remove_field changed acc] returns a new
+    pair list from the old pair list [pairs] with [remove_field] changed
+    and used [changed] and [acc] to keep track of progress. *)
 let rec pair_list_no_field pairs remove_field changed acc =
   match pairs with
   | (name, value) :: t ->
@@ -857,6 +876,9 @@ let rec pair_list_no_field pairs remove_field changed acc =
       if changed = false then raise (FieldNotFound remove_field)
       else acc
 
+(** [delete_from_row row_entries field_name is_first acc] deletes the
+    [field_name] from [row_entries] using [is_first] and [acc] to keep
+    track of progress. *)
 let rec delete_from_row row_entries field_name is_first acc =
   match row_entries with
   | (name, value) :: t ->
@@ -918,6 +940,9 @@ let delete_field
   in
   write_to_file file (Yojson.Basic.from_string final_db)
 
+(** [constructed_sorted_db row_list pairs header db_acc is_first]
+    creates a string for the sorted databases containing rows [row_list]
+    and [pairs] with [header] using [db_acc] and [is_first]. *)
 let rec construct_sorted_db row_list pairs header db_acc is_first =
   match pairs with
   | (index, value) :: t ->
@@ -933,6 +958,8 @@ let rec construct_sorted_db row_list pairs header db_acc is_first =
       if is_first then "[" ^ header ^ "]"
       else "[" ^ header ^ "," ^ db_acc ^ "]"
 
+(** [row_comp_func x y conv_func] compares [x] and [y] using
+    [conv_func]. *)
 let row_comp_func x y conv_func =
   let v1, v2 = (String.trim (snd x), String.trim (snd y)) in
   match (String.length v1, String.length v2) with

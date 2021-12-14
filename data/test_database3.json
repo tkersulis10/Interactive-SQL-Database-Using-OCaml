@@ -1,9 +1,9 @@
 {
   "Users": [
     {
-      "name": "",
-      "age": "",
-      "fact": ""
+      "name": "string",
+      "age": "string",
+      "fact": "string"
     },
     {
       "name": "Max",
@@ -23,11 +23,11 @@
   ],
   "test": [
     {
-      "1": "",
-      "2": "",
-      "3": "",
-      "tvalue": "",
-      "opval": ""
+      "1": "string",
+      "2": "int",
+      "3": "int",
+      "tvalue": "string",
+      "opval": "string"
     },
     {
       "1": "l o l",

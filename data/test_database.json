@@ -1,9 +1,9 @@
 {
   "Users": [
     {
-      "name": "",
-      "age": "",
-      "fact": ""
+      "name": "string",
+      "age": "int",
+      "fact": "string"
     },
     {
       "name": "Max",
@@ -13,11 +13,11 @@
   ],
   "test": [
     {
-      "1": "",
-      "2": "",
-      "3": "",
-      "4": "",
-      "5": ""
+      "1": "string",
+      "2": "string",
+      "3": "string",
+      "4": "string",
+      "5": "string"
     },
     {
       "1": "a",

@@ -1,10 +1,10 @@
 {
   "Types": [
     {
-      "bool": "",
-      "float": "",
-      "string": "",
-      "int": ""
+      "bool": "bool",
+      "float": "float",
+      "string": "string",
+      "int": "int"
     },
     {
       "bool": "true",
@@ -27,10 +27,10 @@
   ],
   "Mismatch": [
     {
-      "1": "",
-      "Int mismatch": "",
-      "Max/Min": "",
-      "Weird Notation": ""
+      "1": "string",
+      "Int mismatch": "int",
+      "Max/Min": "int",
+      "Weird Notation": "string"
     },
     {
       "1": "50.5",

@@ -59,9 +59,9 @@ val splice_outer_parens : string -> string
     the constant 2 outer parentheses of the database management object. *)
 
 val add_database : string -> string -> (string * string) list -> unit
-(** [add_database file name values] adds a new database labeled [name]
-    with values [values] to the database list in file [file] --
-    Yojson.Basic.to_file file (Yojson.Basic.from_string str). *)
+(** [add_database file name field_types] adds a new database labeled
+    [name] with values [fields_types] to the database list in file
+    [file] -- Yojson.Basic.to_file file (Yojson.Basic.from_string str). *)
 
 val add_database_t : string -> string -> Yojson.Basic.t -> unit
 (** [add_database_t file name values] adds a new database labeled [name]
@@ -122,9 +122,9 @@ val add_element_to_database : string -> string -> string -> unit
 
 val add_field_to_all_rows :
   string -> ?val_name:string -> string -> string -> string -> unit
-(** [add_element_to_all_database file database_name value_name] adds the
-    element [value_name] to all rows of the database [database_name] in
-    [file]. *)
+(** [add_element_to_all_database file value_name database_name field_name field_type]
+    adds the field [field_name] with type [field_type] with optional
+    [value_name] to all rows of the database [database_name] in [file]. *)
 
 val delete_field : string -> string -> string -> unit
 (** [delete_field file db_name field_name] removes the column with field
